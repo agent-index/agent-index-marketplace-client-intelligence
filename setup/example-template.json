@@ -1,0 +1,30 @@
+{
+  "slug": "example-client",
+  "name": "Example Client",
+  "version": 1,
+  "created": "2026-05-13",
+  "last_updated": "2026-05-13",
+  "description": "A minimal example client template shipped with client-intelligence v1.0.0. Demonstrates the template structure with one mandatory field and three optional fields. Delete and replace with your own templates as your org's needs become clearer.",
+  "fields": [
+    {
+      "name": "company_name",
+      "property": "mandatory",
+      "description": "The official name of the client company or organization."
+    },
+    {
+      "name": "primary_contact_name",
+      "property": "optional",
+      "description": "Name of the primary contact at this client."
+    },
+    {
+      "name": "primary_contact_email",
+      "property": "optional",
+      "description": "Email address of the primary contact."
+    },
+    {
+      "name": "notes",
+      "property": "optional",
+      "description": "Free-text notes about this client — relationship history, important context, anything that doesn't fit a structured field."
+    }
+  ]
+}

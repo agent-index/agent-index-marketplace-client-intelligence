@@ -1,0 +1,518 @@
+{
+  "name": "client-intelligence",
+  "display_name": "Client Intelligence",
+  "version": "1.0.0",
+  "description": "Primary repository of client-level knowledge. Admins author named templates that define mandatory and optional fields. Members create client instances from templates, can add their own extension fields, and link external data. Per-instance View / Edit / Delete permissions are enforced by Drive ACLs via the access-control adapter contract. A universally-visible visibility floor exposes client names to all collection members while gating data behind view permission. Append-only data changelogs track instance-level history; permission audit is sourced from Drive Activity, not duplicated in collection state. v1.0.0 ships 15 user-facing tasks across template management, instance management, permission management, and admin lifecycle, plus an install-time setup task that bootstraps the collection on a fresh org install.",
+  "author": "agent-index",
+  "license": "open",
+  "category": "client-management",
+  "agent_index_min_version": "3.1.0",
+  "api": [
+    {
+      "name": "create-template",
+      "triggers": [
+        {
+          "phrase": "create a new template",
+          "capability": "create-template",
+          "description": "Author a new client template"
+        },
+        {
+          "phrase": "new client template",
+          "capability": "create-template",
+          "description": "Author a new client template"
+        },
+        {
+          "phrase": "add a template",
+          "capability": "create-template",
+          "description": "Author a new client template"
+        },
+        {
+          "phrase": "make a new template",
+          "capability": "create-template",
+          "description": "Author a new client template"
+        }
+      ]
+    },
+    {
+      "name": "list-templates",
+      "triggers": [
+        {
+          "phrase": "list templates",
+          "capability": "list-templates",
+          "description": "Enumerate all available client templates"
+        },
+        {
+          "phrase": "what templates do we have",
+          "capability": "list-templates",
+          "description": "Enumerate all available client templates"
+        },
+        {
+          "phrase": "show available templates",
+          "capability": "list-templates",
+          "description": "Enumerate all available client templates"
+        },
+        {
+          "phrase": "show me the templates",
+          "capability": "list-templates",
+          "description": "Enumerate all available client templates"
+        }
+      ]
+    },
+    {
+      "name": "view-template",
+      "triggers": [
+        {
+          "phrase": "view template",
+          "capability": "view-template",
+          "description": "Show a specific template's fields and version history"
+        },
+        {
+          "phrase": "show me the template",
+          "capability": "view-template",
+          "description": "Show a specific template's fields and version history"
+        },
+        {
+          "phrase": "describe template",
+          "capability": "view-template",
+          "description": "Show a specific template's fields and version history"
+        },
+        {
+          "phrase": "what is in the template",
+          "capability": "view-template",
+          "description": "Show a specific template's fields and version history"
+        }
+      ]
+    },
+    {
+      "name": "edit-template",
+      "triggers": [
+        {
+          "phrase": "edit the template",
+          "capability": "edit-template",
+          "description": "Edit an existing client template; choose Migrate or No-impact per edit batch"
+        },
+        {
+          "phrase": "add a field to the template",
+          "capability": "edit-template",
+          "description": "Edit an existing client template; choose Migrate or No-impact per edit batch"
+        },
+        {
+          "phrase": "rename a field on the template",
+          "capability": "edit-template",
+          "description": "Edit an existing client template; choose Migrate or No-impact per edit batch"
+        },
+        {
+          "phrase": "remove a field from the template",
+          "capability": "edit-template",
+          "description": "Edit an existing client template; choose Migrate or No-impact per edit batch"
+        },
+        {
+          "phrase": "change the template",
+          "capability": "edit-template",
+          "description": "Edit an existing client template; choose Migrate or No-impact per edit batch"
+        }
+      ]
+    },
+    {
+      "name": "create-client",
+      "triggers": [
+        {
+          "phrase": "create a client",
+          "capability": "create-client",
+          "description": "Add a new client instance from a template"
+        },
+        {
+          "phrase": "add a new client",
+          "capability": "create-client",
+          "description": "Add a new client instance from a template"
+        },
+        {
+          "phrase": "new client",
+          "capability": "create-client",
+          "description": "Add a new client instance from a template"
+        },
+        {
+          "phrase": "set up a client",
+          "capability": "create-client",
+          "description": "Add a new client instance from a template"
+        },
+        {
+          "phrase": "create a client called",
+          "capability": "create-client",
+          "description": "Add a new client instance from a template"
+        }
+      ]
+    },
+    {
+      "name": "view-client",
+      "triggers": [
+        {
+          "phrase": "view client",
+          "capability": "view-client",
+          "description": "Show a specific client's data and recent activity"
+        },
+        {
+          "phrase": "show me client",
+          "capability": "view-client",
+          "description": "Show a specific client's data and recent activity"
+        },
+        {
+          "phrase": "what do we have on",
+          "capability": "view-client",
+          "description": "Show a specific client's data and recent activity"
+        },
+        {
+          "phrase": "show the client",
+          "capability": "view-client",
+          "description": "Show a specific client's data and recent activity"
+        }
+      ]
+    },
+    {
+      "name": "list-clients",
+      "triggers": [
+        {
+          "phrase": "list clients",
+          "capability": "list-clients",
+          "description": "Enumerate all clients in the collection"
+        },
+        {
+          "phrase": "show me all clients",
+          "capability": "list-clients",
+          "description": "Enumerate all clients in the collection"
+        },
+        {
+          "phrase": "who are our clients",
+          "capability": "list-clients",
+          "description": "Enumerate all clients in the collection"
+        },
+        {
+          "phrase": "what clients do we have",
+          "capability": "list-clients",
+          "description": "Enumerate all clients in the collection"
+        }
+      ]
+    },
+    {
+      "name": "edit-client",
+      "triggers": [
+        {
+          "phrase": "edit client",
+          "capability": "edit-client",
+          "description": "Modify a client's field values or extension fields"
+        },
+        {
+          "phrase": "update client",
+          "capability": "edit-client",
+          "description": "Modify a client's field values or extension fields"
+        },
+        {
+          "phrase": "change the client",
+          "capability": "edit-client",
+          "description": "Modify a client's field values or extension fields"
+        },
+        {
+          "phrase": "add a field to client",
+          "capability": "edit-client",
+          "description": "Modify a client's field values or extension fields"
+        }
+      ]
+    },
+    {
+      "name": "delete-client",
+      "triggers": [
+        {
+          "phrase": "delete client",
+          "capability": "delete-client",
+          "description": "Soft or hard delete a client instance"
+        },
+        {
+          "phrase": "remove client",
+          "capability": "delete-client",
+          "description": "Soft or hard delete a client instance"
+        },
+        {
+          "phrase": "archive client",
+          "capability": "delete-client",
+          "description": "Soft or hard delete a client instance"
+        },
+        {
+          "phrase": "drop client",
+          "capability": "delete-client",
+          "description": "Soft or hard delete a client instance"
+        }
+      ]
+    },
+    {
+      "name": "grant-permission",
+      "triggers": [
+        {
+          "phrase": "grant permission",
+          "capability": "grant-permission",
+          "description": "Grant view/edit/delete on a client to a member"
+        },
+        {
+          "phrase": "give access to",
+          "capability": "grant-permission",
+          "description": "Grant view/edit/delete on a client to a member"
+        },
+        {
+          "phrase": "share client with",
+          "capability": "grant-permission",
+          "description": "Grant view/edit/delete on a client to a member"
+        },
+        {
+          "phrase": "add member to client",
+          "capability": "grant-permission",
+          "description": "Grant view/edit/delete on a client to a member"
+        }
+      ]
+    },
+    {
+      "name": "revoke-permission",
+      "triggers": [
+        {
+          "phrase": "revoke permission",
+          "capability": "revoke-permission",
+          "description": "Revoke view/edit/delete on a client from a member"
+        },
+        {
+          "phrase": "remove access",
+          "capability": "revoke-permission",
+          "description": "Revoke view/edit/delete on a client from a member"
+        },
+        {
+          "phrase": "unshare client with",
+          "capability": "revoke-permission",
+          "description": "Revoke view/edit/delete on a client from a member"
+        },
+        {
+          "phrase": "take away access",
+          "capability": "revoke-permission",
+          "description": "Revoke view/edit/delete on a client from a member"
+        }
+      ]
+    },
+    {
+      "name": "view-permissions",
+      "triggers": [
+        {
+          "phrase": "view permissions",
+          "capability": "view-permissions",
+          "description": "Show who has access to a client and at what level"
+        },
+        {
+          "phrase": "who has access to",
+          "capability": "view-permissions",
+          "description": "Show who has access to a client and at what level"
+        },
+        {
+          "phrase": "permissions on client",
+          "capability": "view-permissions",
+          "description": "Show who has access to a client and at what level"
+        },
+        {
+          "phrase": "who can see",
+          "capability": "view-permissions",
+          "description": "Show who has access to a client and at what level"
+        }
+      ]
+    },
+    {
+      "name": "add-admin",
+      "triggers": [
+        {
+          "phrase": "add an admin",
+          "capability": "add-admin",
+          "description": "Grant admin role on the client-intelligence collection"
+        },
+        {
+          "phrase": "make admin",
+          "capability": "add-admin",
+          "description": "Grant admin role on the client-intelligence collection"
+        },
+        {
+          "phrase": "promote to admin",
+          "capability": "add-admin",
+          "description": "Grant admin role on the client-intelligence collection"
+        },
+        {
+          "phrase": "grant admin",
+          "capability": "add-admin",
+          "description": "Grant admin role on the client-intelligence collection"
+        }
+      ]
+    },
+    {
+      "name": "remove-admin",
+      "triggers": [
+        {
+          "phrase": "remove an admin",
+          "capability": "remove-admin",
+          "description": "Revoke admin role from a member"
+        },
+        {
+          "phrase": "revoke admin",
+          "capability": "remove-admin",
+          "description": "Revoke admin role from a member"
+        },
+        {
+          "phrase": "demote admin",
+          "capability": "remove-admin",
+          "description": "Revoke admin role from a member"
+        },
+        {
+          "phrase": "no longer an admin",
+          "capability": "remove-admin",
+          "description": "Revoke admin role from a member"
+        }
+      ]
+    },
+    {
+      "name": "edit-default-permissions",
+      "triggers": [
+        {
+          "phrase": "edit default permissions",
+          "capability": "edit-default-permissions",
+          "description": "Modify the collection-level default permission policy applied to new clients"
+        },
+        {
+          "phrase": "change default policy",
+          "capability": "edit-default-permissions",
+          "description": "Modify the collection-level default permission policy applied to new clients"
+        },
+        {
+          "phrase": "update default permissions",
+          "capability": "edit-default-permissions",
+          "description": "Modify the collection-level default permission policy applied to new clients"
+        },
+        {
+          "phrase": "set default policy",
+          "capability": "edit-default-permissions",
+          "description": "Modify the collection-level default permission policy applied to new clients"
+        }
+      ]
+    },
+    {
+      "name": "client-intelligence-tutorial",
+      "triggers": [
+        {
+          "phrase": "how do client intelligence work",
+          "capability": "client-intelligence-tutorial",
+          "description": "Learn how the client-intelligence collection works"
+        },
+        {
+          "phrase": "client intelligence tutorial",
+          "capability": "client-intelligence-tutorial",
+          "description": "Guided tour of the client-intelligence collection"
+        },
+        {
+          "phrase": "explain client intelligence",
+          "capability": "client-intelligence-tutorial",
+          "description": "Get an explanation of how the client-intelligence collection works"
+        },
+        {
+          "phrase": "what does client intelligence do",
+          "capability": "client-intelligence-tutorial",
+          "description": "Learn what the client-intelligence collection provides"
+        }
+      ]
+    }
+  ],
+  "provides": [
+    {
+      "capability": "client-intelligence",
+      "capability_version": "1.0.0",
+      "operations": {
+        "create-template": {
+          "implemented_by": "create-template",
+          "type": "task"
+        },
+        "list-templates": {
+          "implemented_by": "list-templates",
+          "type": "task"
+        },
+        "view-template": {
+          "implemented_by": "view-template",
+          "type": "task"
+        },
+        "edit-template": {
+          "implemented_by": "edit-template",
+          "type": "task"
+        },
+        "create-client": {
+          "implemented_by": "create-client",
+          "type": "task"
+        },
+        "view-client": {
+          "implemented_by": "view-client",
+          "type": "task"
+        },
+        "list-clients": {
+          "implemented_by": "list-clients",
+          "type": "task"
+        },
+        "edit-client": {
+          "implemented_by": "edit-client",
+          "type": "task"
+        },
+        "delete-client": {
+          "implemented_by": "delete-client",
+          "type": "task"
+        },
+        "grant-permission": {
+          "implemented_by": "grant-permission",
+          "type": "task"
+        },
+        "revoke-permission": {
+          "implemented_by": "revoke-permission",
+          "type": "task"
+        },
+        "view-permissions": {
+          "implemented_by": "view-permissions",
+          "type": "task"
+        },
+        "add-admin": {
+          "implemented_by": "add-admin",
+          "type": "task"
+        },
+        "remove-admin": {
+          "implemented_by": "remove-admin",
+          "type": "task"
+        },
+        "edit-default-permissions": {
+          "implemented_by": "edit-default-permissions",
+          "type": "task"
+        },
+        "client-intelligence-tutorial": {
+          "implemented_by": "client-intelligence-tutorial",
+          "type": "skill"
+        }
+      }
+    }
+  ],
+  "dependencies": [],
+  "external_dependencies": [
+    {
+      "system": "Remote filesystem access (access-control contract 2.0.0 or higher)",
+      "access_required": "Read/write access to /shared/client-intelligence/ via aifs_* tools; per-instance permission management requires aifs_share, aifs_unshare, aifs_get_permissions, and revision-aware aifs_write (if_revision)",
+      "contact": "org admin",
+      "required": true
+    },
+    {
+      "system": "All-members Google Group at the org level",
+      "access_required": "org-config.json must define remote_filesystem.connection.all_members_group; setup task reads this to apply the collection-wide visibility floor",
+      "contact": "org admin",
+      "required": true
+    },
+    {
+      "system": "Permission-change-helper binary",
+      "access_required": "mcp-servers/permission-helper-go/agent-index-show-plan (preferred) or mcp-servers/permission-helper/show-plan.sh (fallback) must be installed",
+      "contact": "org admin",
+      "required": true
+    }
+  ],
+  "eol_date": null,
+  "marketplace_url": "https://github.com/agent-index/agent-index-marketplace-client-intelligence",
+  "support_url": "https://agent-index.ai/support"
+}

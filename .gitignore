@@ -1,0 +1,12 @@
+# Ephemeral / per-developer
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Build/preflight outputs that shouldn't be checked in
+preflight-output/
+
+# Local notes that aren't part of the collection
+SCRATCH.md
+TODO.local.md

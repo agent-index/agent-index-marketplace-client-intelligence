@@ -1,0 +1,25 @@
+{
+  "name": "client-intelligence-tutorial",
+  "type": "skill",
+  "display_name": "Client Intelligence Tutorial",
+  "collection": "client-intelligence",
+  "collection_version": "1.0.0",
+  "version": "1.0.0",
+  "eol_date": null,
+  "eol_warning_days": 60,
+  "stateful": false,
+  "produces_artifacts": false,
+  "produces_shared_artifacts": false,
+  "setup_template": "client-intelligence-tutorial-setup.md",
+  "dependency_status": "complete",
+  "missing_dependencies": [],
+  "parameter_provenance": {},
+  "dependencies": {
+    "skills": [],
+    "tasks": []
+  },
+  "external_dependencies": [],
+  "optional_external_dependencies": [],
+  "reads_from": "/shared/client-intelligence/",
+  "writes_to": null
+}

@@ -1,0 +1,27 @@
+{
+  "name": "list-templates",
+  "type": "task",
+  "display_name": "List Templates",
+  "collection": "client-intelligence",
+  "collection_version": "1.0.0",
+  "version": "1.0.0",
+  "eol_date": null,
+  "eol_warning_days": 60,
+  "stateful": false,
+  "produces_artifacts": false,
+  "produces_shared_artifacts": false,
+  "setup_template": "list-templates-setup.md",
+  "dependency_status": "complete",
+  "missing_dependencies": [],
+  "parameter_provenance": {},
+  "dependencies": {
+    "skills": [],
+    "tasks": []
+  },
+  "external_dependencies": [
+    "Remote filesystem access (adapter contract 2.0.0 or higher)"
+  ],
+  "optional_external_dependencies": [],
+  "reads_from": "/shared/client-intelligence/templates/",
+  "writes_to": null
+}
