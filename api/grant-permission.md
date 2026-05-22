@@ -1,7 +1,7 @@
 ---
 name: grant-permission
 type: task
-version: 1.0.0
+version: 1.1.0
 collection: client-intelligence
 description: Grant View / Edit / Delete permission on a client instance to a member. Authority is filesystem-enforced — current grantees and admins can grant; others cannot. The actual share goes through the permission-change-helper skill (the agent never calls aifs_share directly).
 stateful: false
@@ -82,26 +82,29 @@ If the filtered list is empty: *"All requested permissions are already in place 
 
 ```json
 {
-  "version": "1.0",
+  "version": "1.1",
   "operations": [
     {
       "op": "share",
       "resource": "/shared/client-intelligence/instances/{slug}/",
       "recipient": "{member.email}",
       "role": "{drive_role}",
+      "inherit": false,
       "before": {"recipients": <pre_state.permissions>}
     }
   ],
   "context": {
     "requestor": "{caller.member_hash}",
     "calling_task": "grant-permission",
-    "purpose": "Grant `{member.display_name}` ({permissions joined}) on client `{slug}` ({name})."
+    "purpose": "Grant `{member.display_name}` ({permissions joined}) on client `{slug}` ({name}) with parent-inheritance override."
   },
   "mode": "fail_soft"
 }
 ```
 
 (Typically a single operation. If view + edit are both requested, that's still one operation with role `writer`, since writer implies read.)
+
+**Note on `inherit: false`:** activated in client-intelligence 1.1.0 against agent-index-core 3.7.3's helper-spec v1.1 and gdrive adapter 2.3.0's actual implementation. The grant now correctly narrows below the all-members Writer inheritance from the parent `instances/` folder. The applying user (whoever clicks Accept on the review page) must have `organizer` role on the Shared Drive; non-organizer admins will see a clean `AccessDeniedError` with an actionable message. For org admins this works transparently.
 
 ### Step 8: Invoke the helper
 
@@ -154,10 +157,4 @@ Not stateful. The interview is in-memory; the helper invocation and post-state v
 - **Target member is in the org but doesn't have a member_hash recorded yet.** Run `@ai:invite-member` first (referral) or halt with that suggestion. V1 doesn't auto-invite.
 - **Target member is no longer in the org (revoked).** Surface: *"`{member.email}` is in the registry but isn't a current member. They've been removed. The grant would still apply at the Drive level, but they wouldn't be able to use it."* Allow if the caller confirms; useful for transition cases.
 - **Caller requests `view + edit + delete` but already has `view` and the target has `writer` inherited.** Step 6 filters out the no-op `view` (target already has read access); the `writer` grant is also a no-op (target already has writer via inheritance). Result: empty spec; halt at Step 6.
-- **Helper succeeds but post-state verification fails.** Likely Drive eventual-consistency lag. Retry the verification once with a 5-second pause; if still missing, surface a warning and trust the helper's report.
-
----
-
-## V1 Limitations
-
-Same as `create-client`: the helper spec v1.0 doesn't pass `inherit: false` through to `aifs_share`. The grant operates on top of the inherited all-members Writer from `instances/`. The grant is meaningful for audit (Drive Activity records it) and for the case where collection membership later restricts inheritance, but in V1 the all-members group has Writer access to every instance regardless. See `helper-spec-needs-inherit-passthrough` under the `builder-profile-adaptive-dev-process` umbrella in core-improvements.
+- **Helper succeeds but post-state verification fails.** Likely Drive eventual-consistency lag. Retry the verification once with a 5-second pause; if still missing, surface a warning and t

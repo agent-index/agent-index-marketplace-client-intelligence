@@ -1,7 +1,7 @@
 ---
 name: create-client
 type: task
-version: 1.0.0
+version: 1.1.0
 collection: client-intelligence
 description: Member-facing task to create a new client instance from a template. Interviews the member for template-defined field values, optional member-added extension fields, a client name, and optional per-creation permission grants. Writes the instance data, the public-index entry, and the initial changelog entry, then invokes permission-change-helper to apply the union of (creator default + collection-level default policy + per-creation explicit grants) as Drive ACLs on the new instance folder.
 stateful: false
@@ -210,17 +210,18 @@ Union: combine per (member, permission) pair. The creator's grants are unconditi
 
 ### Step 13: Build the permission-change-helper spec
 
-Compose a v1.0 spec per `agent-index-core/api/permission-change-helper.md`:
+Compose a v1.1 spec per `agent-index-core/api/permission-change-helper.md` (v1.1 added in core 3.7.3 to support the `inherit: false` field). Every per-instance share carries `inherit: false` so the recipient sees only the explicit grant on the instance folder, not the all-members Writer they would otherwise inherit from `instances/`. This is the V1 data-visibility-floor fix activated in client-intelligence 1.1.0:
 
 ```json
 {
-  "version": "1.0",
+  "version": "1.1",
   "operations": [
     {
       "op": "share",
       "resource": "/shared/client-intelligence/instances/{slug}/",
       "recipient": "{member_email_or_group_address}",
       "role": "{drive_role}",
+      "inherit": false,
       "before": { "recipients": <pre_state.permissions> }
     },
     ... (one per non-no-op (member, permission) in the union)
@@ -228,13 +229,17 @@ Compose a v1.0 spec per `agent-index-core/api/permission-change-helper.md`:
   "context": {
     "requestor": "{caller.member_hash}",
     "calling_task": "create-client",
-    "purpose": "Grant initial access on the new client `{client_name}` ({slug}). {N} share operation(s): creator gets full access; collection-policy grants apply; {M} per-creation grants from invocation."
+    "purpose": "Grant initial access on the new client `{client_name}` ({slug}). {N} share operation(s) with parent-inheritance override: creator gets full access; collection-policy grants apply; {M} per-creation grants from invocation."
   },
   "mode": "fail_soft"
 }
 ```
 
-Permission mapping for the `role` field: `view` → `reader`; `edit` → `writer`; `delete` → `writer` (Drive doesn't model delete separately — delete is enforced at the task layer based on whether the caller has `delete` recorded in the client-intelligence permission model. V1 stores no per-permission record; future versions may add a per-instance `permissions.json` artifact if needed for finer-grained intent. See V1 limitations below.).
+Permission mapping for the `role` field: `view` → `reader`; `edit` → `writer`; `delete` → `writer` (Drive doesn't model delete separately — delete is enforced at the task layer based on whether the caller has `delete` recorded in the client-intelligence permission model. V1 stores no per-permission record; future versions may add a per-instance `permissions.json` artifact if needed for finer-grained intent.).
+
+**Note on `inherit: false`:** the adapter (gdrive 2.3.0+) implements this via `inheritedPermissionsDisabled: true` on the folder resource, which requires `organizer` role on the Shared Drive (or `owner` on My Drive). The user who clicks Accept on the review page must have that role. If they don't, the helper returns an `AccessDeniedError` with an actionable message before any state changes — clean failure, no partial state. Org admins always have organizer rights; non-admin members who try to create-client will get the error.
+
+**Backward compat:** specs older than client-intelligence 1.1.0 emitted v1.0 specs without `inherit`. Those still validate but produce the pre-1.1.0 additive-on-top-of-parent-inheritance behavior (the V1 limitation). Existing flows that haven't been updated to v1.1 continue to work; only the data-visibility floor is degraded for them.
 
 If the filtered operations list is empty (everyone already has the requested permission via inheritance — possible if collection-policy resolves to the all-members group already inherited as Writer), skip Step 14 entirely.
 
@@ -317,5 +322,5 @@ Not stateful from the agent's side. The interview is in-memory only. After Step 
 
 Two known limitations of V1 that affect this task:
 
-1. **Data visibility floor depends on access-control Phase 5.** The current `aifs_share` spec defines an `inherit: false` parameter that lets a per-folder ACL override parent inheritance. The permission-change-helper spec format (v1.0) does not yet expose this parameter through to `aifs_share`. As a result, until access-control Phase 5 extends the helper spec to support per-operation `inherit` settings, the per-instance ACL applied by this task is **additive** on top of the inherited all-members Writer grant from `instances/` — meaning every member of the collection has Writer on every new instance, regardless of the intended grant set. The visibility floor on instance names is preserved (correctly gated via the public-index file's separate ACL), but data is universally visible in V1. The codename pattern (using a non-identifying name for confidential engagements) is the only confidentiality mechanism that works pre-Phase-5. See the umbrella idea in `core-improvements` for the codification of this dependency.
+1. **Data visibility floor — RESOLVED in client-intelligence 1.1.0.** The previous V1 limitation was: the per-instance ACL applied by this task was additive on top of the inherited all-members Writer grant from `instances/`, meaning every collection member had Writer access on every new instance regardless of intended grants. Resolution: agent-index-core 3.7.3 extended the permission-change-helper spec format to v1.1 with an `inherit: boolean` field on share operations; gdrive adapter 2.3.0 actually implements `inherit: false` via `inheritedPermissionsDisabled: true` on the folder resource (closing idea `helper-spec-needs-inherit-passthrough`). This task's Step 13 now emits `inherit: false` on every per-instance share, so the recipient sees only the explicit grant — parent-folder inheritance is overridden. The data-visibility floor on instance contents now works correctly in addition to the visibility floor on names. The codename pattern remains useful for engagements where even the existence of the instance should be confidential, but is no longer required for data confidentiality.
 2. **Permission audit history requires `aifs_get_audit`.** Drive Activity records the share events from the helper invocation, but no V1 task surfaces that history. `view-client-audit` is deferred to post-V1 pending access-control's `aifs_get_audit` adapter operation.

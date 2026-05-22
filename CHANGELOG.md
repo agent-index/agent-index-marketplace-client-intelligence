@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.1.0] — 2026-05-20 — companion to core 3.7.3, gdrive 2.3.0
+
+### Fixed
+
+- **V1 data-visibility-floor limitation resolved.** Previously documented in V1 release notes: per-instance ACLs applied by `create-client` and `grant-permission` were additive on top of the inherited all-members Writer grant from `/shared/client-intelligence/instances/`, meaning every collection member retained Writer access on every new instance regardless of the intended grant set. The visibility floor on instance names worked (public-index gating); the floor on instance contents did not. Codenames were the only confidentiality mechanism that worked in V1. Now resolved end-to-end across three collections:
+  - agent-index-core 3.7.3 added `inherit: boolean` to the permission-change-helper spec format (v1.1; closes idea `helper-spec-needs-inherit-passthrough` sections 1–3).
+  - agent-index-filesystem-gdrive 2.3.0 actually implements `inherit: false` via `inheritedPermissionsDisabled: true` on the file resource (closes the adapter portion of the same idea; requires organizer role on the Shared Drive).
+  - **This release activates `inherit: false` in `create-client` and `grant-permission` callers.** Per-instance shares now correctly narrow below parent-folder inheritance.
+
+### Changed
+
+- **`create-client` 1.0.0 → 1.1.0** — Step 13's helper spec is now v1.1 with `inherit: false` on every per-instance share operation. Purpose string updated to mention "parent-inheritance override." Limitations section "Data visibility floor" rewritten to mark the limitation resolved. The codename pattern remains useful for engagements where the *existence* of the instance is sensitive (instance names are still discoverable via public-index) but is no longer required for data confidentiality.
+- **`grant-permission` 1.0.0 → 1.1.0** — Step 7's helper spec is now v1.1 with `inherit: false`. Same activation mechanics as `create-client`. Limitations section updated.
+
+### Notes
+
+- **Versions:** collection 1.0.0 → 1.1.0. `create-client` task 1.0.0 → 1.1.0. `grant-permission` task 1.0.0 → 1.1.0. All API manifests' `collection_version` bumped to 1.1.0. Other tasks unchanged at their original versions but their manifest `collection_version` field also bumped.
+- **Permission requirement:** activating `inherit: false` requires the user who clicks Accept on the helper review page to have `organizer` role on the Shared Drive (or `owner` on My Drive). Org admins always have this; non-admin members will see a clean `AccessDeniedError` from the adapter with an actionable message. The current admin-driven instance creation flow works transparently; this constraint becomes meaningful if/when non-admin instance creation is enabled in a future release.
+- **Unshare ops unchanged:** `revoke-permission` and `remove-admin` use `op: "unshare"` which doesn't carry the `inherit` field. Removing an explicit grant does NOT re-enable parent-folder inheritance (the file's `inheritedPermissionsDisabled` flag persists across share/unshare cycles by design). If a workflow ever needs to "fully restore parent inheritance," that's a separate semantic — out of scope for 1.1.0.
+- **`add-admin` unchanged:** the admin role is granted on `templates/` and `config/`, whose parent `/shared/client-intelligence/` has only `reader` for all-members. Sharing those subfolders with admins narrows correctly under the default semantic; no `inherit: false` needed.
+
+---
+
 ## [1.0.0] — 2026-05-15
 
 Initial release. First collection of the agency-workflow collection-by-collection design series. Built against three design documents in the `agency-workflow` project (design, storage layout, task surface) plus a V1 tech design in the `client-intelligence-collection` build project. Implementation proceeded through six phases (scaffold → templates → instances → permissions → admin → preflight & release) with end-to-end install verification before publish.

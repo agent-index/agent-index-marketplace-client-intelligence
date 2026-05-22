@@ -1,7 +1,7 @@
 {
   "name": "client-intelligence",
   "display_name": "Client Intelligence",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Primary repository of client-level knowledge. Admins author named templates that define mandatory and optional fields. Members create client instances from templates, can add their own extension fields, and link external data. Per-instance View / Edit / Delete permissions are enforced by Drive ACLs via the access-control adapter contract. A universally-visible visibility floor exposes client names to all collection members while gating data behind view permission. Append-only data changelogs track instance-level history; permission audit is sourced from Drive Activity, not duplicated in collection state. v1.0.0 ships 15 user-facing tasks across template management, instance management, permission management, and admin lifecycle, plus an install-time setup task that bootstraps the collection on a fresh org install.",
   "author": "agent-index",
   "license": "open",
