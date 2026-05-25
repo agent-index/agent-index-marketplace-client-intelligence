@@ -133,6 +133,18 @@ Drive Activity has recorded the share event. To revoke later, run @ai:revoke-per
 
 ---
 
+## V1 Limitations
+
+1. **Data visibility floor — PARTIALLY RESOLVED in client-intelligence 1.1.1.** As of agent-index-core 3.7.3 + gdrive adapter 2.3.0, `grant-permission` emits share operations with `inherit: false`, which sets `inheritedPermissionsDisabled: true` on the target instance folder. This correctly blocks write access inheritance from the immediate parent `/shared/client-intelligence/instances/` folder.
+
+   However, read access via grants rooted higher in the tree (e.g., a permissive reader grant on `/shared/client-intelligence/` itself) still flows through. Drive's `inheritedPermissionsDisabled` mechanism only blocks immediate-parent inheritance. The full fix is tracked as core-improvements idea `data-visibility-floor-ancestor-leak`; ships in 3.8.0 or later.
+
+   For confidential engagements, see `create-client.md` § "Data visibility floor" for the two operational patterns (codename and empty-shell + off-platform). The same patterns apply to grants applied via this task.
+
+2. **Permission audit history requires `aifs_get_audit`.** Drive Activity records the share events from the helper invocation, but no V1 task surfaces that history. `view-client-audit` is deferred to post-V1 pending access-control's `aifs_get_audit` adapter operation.
+
+---
+
 ## Directives
 
 ### Behavior
@@ -157,4 +169,4 @@ Not stateful. The interview is in-memory; the helper invocation and post-state v
 - **Target member is in the org but doesn't have a member_hash recorded yet.** Run `@ai:invite-member` first (referral) or halt with that suggestion. V1 doesn't auto-invite.
 - **Target member is no longer in the org (revoked).** Surface: *"`{member.email}` is in the registry but isn't a current member. They've been removed. The grant would still apply at the Drive level, but they wouldn't be able to use it."* Allow if the caller confirms; useful for transition cases.
 - **Caller requests `view + edit + delete` but already has `view` and the target has `writer` inherited.** Step 6 filters out the no-op `view` (target already has read access); the `writer` grant is also a no-op (target already has writer via inheritance). Result: empty spec; halt at Step 6.
-- **Helper succeeds but post-state verification fails.** Likely Drive eventual-consistency lag. Retry the verification once with a 5-second pause; if still missing, surface a warning and t
+- **Helper succeeds but post-state verification fails.** Likely Drive eventual-consistency lag. Retry the verification once with a 5-second pause; if still missing, surface a warning and treat the operation as applied but flag it for follow-up — the user should re-check via `@ai:view-permissions {slug}` after a minute.

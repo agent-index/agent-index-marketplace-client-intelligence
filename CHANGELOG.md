@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.1.1] — <RELEASE_DATE> — companion to core 3.7.4
+
+### Documentation
+
+- **V1 data-visibility-floor claim corrected.** The 1.1.0 release notes claimed the limitation was "RESOLVED" by `inherit: false` activation. In practice, `inheritedPermissionsDisabled` only blocks immediate-parent inheritance; ancestor grants further up the tree still propagate. Bug `20260522-8d20ea22-3` documented the gap.
+- `create-client.md` § Data visibility floor: rewritten to mark as "partially resolved" and document two operational patterns for confidential engagements (codename pattern for moderate confidentiality; empty-shell + off-platform for highest sensitivity).
+- `grant-permission.md` — added a `## V1 Limitations` section that didn't previously exist; same correction text plus a cross-reference to `create-client.md` for the operational pattern detail.
+- `grant-permission.md` — incidentally completed a pre-existing truncated line in Edge Cases (post-state verification failure handling). Pre-existing issue from the 1.1.0 release; fixed in passing since the file was being touched anyway.
+
+### Notes
+
+- No spec mechanic changes; documentation-only. Task versions for `create-client` and `grant-permission` stay at 1.1.0; manifests get a `collection_version` bump to 1.1.1 (mechanical).
+- Real design fix tracked as core-improvements idea `data-visibility-floor-ancestor-leak`. Two design options (apply override higher in the tree; or restructure all-members grant location) deferred to 3.8.0+ alongside broader access-control project work.
+- Companion releases: agent-index-core 3.7.4 fixes other 3.7.3 follow-ups (Node-helper removal, publish-updates writeback regression, non-admin onboarding). agent-index-filesystem-gdrive 2.4.0 for the non-admin onboarding adapter fixes.
+
+---
+
 ## [1.1.0] — 2026-05-20 — companion to core 3.7.3, gdrive 2.3.0
 
 ### Fixed
