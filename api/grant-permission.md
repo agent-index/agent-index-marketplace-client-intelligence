@@ -1,9 +1,9 @@
 ---
 name: grant-permission
 type: task
-version: 1.1.0
+version: 2.0.0
 collection: client-intelligence
-description: Grant View / Edit / Delete permission on a client instance to a member. Authority is filesystem-enforced — current grantees and admins can grant; others cannot. The actual share goes through the permission-change-helper skill (the agent never calls aifs_share directly).
+description: Grant access on a PRIVATE-tier client to a member — share (reader) or collaborator (read+write). Owner-only — the grant is a Drive permission on a folder the owner owns in their own My Drive, applied through permission-change-helper with the owner's Accept. Org-public clients have uniform access by design; this task explains and offers transition-client instead.
 stateful: false
 produces_artifacts: false
 produces_shared_artifacts: false
@@ -12,161 +12,79 @@ dependencies:
     - permission-change-helper
   tasks: []
 external_dependencies:
-  - Remote filesystem access (adapter contract 2.0.0 or higher)
-  - Permission-change-helper binary (Go) or Node fallback present at mcp-servers/permission-helper-*
-reads_from: "/shared/client-intelligence/"
-writes_to: null
+  - Remote filesystem access (adapter 2.5.0+)
+  - permission-change-helper binary 0.4.1+ (bare id:{folderId} resources)
+reads_from: "/shared/client-intelligence/public-index/, id:{member_folder_id}/clients/"
+writes_to: "/shared/client-intelligence/public-index/"
 ---
 
 ## About This Task
 
-Grant Permission adds a member's access to a client instance. The caller picks the target member, picks which permissions to grant (any combination of view / edit / delete), and the actual share is applied through the permission-change-helper skill — the helper renders a review page in the caller's browser, the caller clicks Accept, and the apply-script uses the caller's own OAuth token to call `aifs_share`. The agent never makes the privileged call directly.
+Grant Permission adds a member's access to a **private-tier** client. Two levels, matching the org-wide sharing vocabulary: *share with X* = X can read; *make X a collaborator* = X can read and write. The grant is a Drive permission on the client folder in the **owner's own My Drive** — only the owner can apply it (they own the folder), via permission-change-helper with their Accept. The pointer's `scope` is updated only after the grant is verified.
 
-Authority is filesystem-enforced. Current grantees on the instance can re-grant (Drive's normal sharing semantics); admins (writers on `templates/`) can grant too. Others get a permission-denied response from the helper's apply-script and the task surfaces a clear error.
+The 1.x View/Edit/Delete model is retired with the per-instance-ACL machinery: there is no separate "delete" grant (deletion semantics are soft and owner/admin-bound), and authority is no longer "any current grantee can re-grant" — **the owner is the only grantor** (Drive ownership is the authority; recipients of a reader/writer grant on a My Drive folder cannot re-share it unless Drive's writersCanShare applies, and the task-level rule is owner-only regardless).
+
+On an **org-public** client this task does not apply: access is uniform for all members. It explains that and offers `@ai:transition-client {slug}` if the caller (owner) wants the client moved to the private tier first.
 
 ### Inputs
 
-- **`slug`** (required, interactive or argument) — the instance to grant on.
-- **`member`** (required, interactive) — email or display name of the member to grant to. Resolved against `members-registry.json`.
-- **`permissions`** (required, interactive) — any combination of `view`, `edit`, `delete`.
+- **`slug`** (required) — the client. Resolved via the universal-floor pointer.
+- **`member`** (required) — email or display name; resolved against `members-registry.json`.
+- **`level`** (required) — `read` (Drive `reader`) or `collaborate` (Drive `writer`).
 
 ### Outputs
 
-- `aifs_share` calls applied via the helper. Drive Activity records the share events.
-- No collection-side files modified.
-
-Confirmation surfaced to the caller after the helper reports `applied`.
-
----
+- One Drive grant on `id:{client_folder_id}` (owner Accepts).
+- Pointer `scope` updated at `/shared/client-intelligence/public-index/instances/{slug}.json`.
 
 ## Workflow
 
-### Step 1: Pre-flight checks
+### Step 1: Pre-flight
 
-- `aifs_auth_status`. Halt if not authenticated.
-- `aifs_exists("/shared/client-intelligence/collection-state.json")`. Halt if false.
-- Confirm permission-helper is installed (Go or Node fallback). Halt with `@ai:update` guidance if not.
+`aifs_auth_status` (re-auth/halt); collection installed check; helper binary present (0.4.1+ — on a `validation_error` mentioning `id:` resources later, the binary is outdated → `@ai:update`).
 
-### Step 2: Resolve slug
+### Step 2: Resolve the client and tier
 
-Accept slug or name. Validate via `aifs_exists("/shared/client-intelligence/public-index/instances/{slug}.json")`. Halt if the client doesn't exist.
+Read the pointer at `/shared/client-intelligence/public-index/instances/{slug}.json` (resolve by name via the index if the caller gave a name). Halt if missing.
+
+- `scope == "org_public"` → *"`{name}` is org-public — every member already has access (uniform, by design; per-person gating doesn't exist in the org tier). If you want it gated, first take it private: `@ai:transition-client {slug}`."* Halt cleanly.
+- `status == "archived"` or `scope == "revoked"` with archived status → surface status; offer view-client. Halt.
+- Private tier: confirm the **caller is the owner** (`owner_hash == caller.member_hash`). Non-owner → *"Only the owner ({owner}) can grant access — the client lives in their private space. Ask them, or view what you can: `@ai:view-client {slug}`."* Halt.
 
 ### Step 3: Resolve target member
 
-Accept email or display name. Read `members-registry.json` to resolve to `member_hash + email`. If multiple matches, ask the caller to disambiguate. If no match: *"I can't find a member matching `{input}`. Run `@ai:invite-member` if they're new to the org, or check the spelling."*
+As 1.x (registry lookup, disambiguate, reject unknown). Self-grant → refuse (owner already has everything). Already granted at the requested level (per pointer scope) → no-op notice, exit.
 
-If the target is the caller themselves: refuse. *"You already have whatever access you have via the existing grants. Grant-permission is for granting access to others."*
+### Step 4: Collect level
 
-### Step 4: Collect permissions
+`read` or `collaborate`. If the target is currently a reader and the request is collaborate (or vice versa), frame it as a level change — the helper spec is the same single `share` op (Drive updates the role).
 
-Ask which permissions to grant. Accept `view`, `edit`, `delete` in any combination. The caller can say "view + edit", "all", "just view", etc. Parse accordingly.
+### Step 5: Apply the grant (owner Accepts)
 
-### Step 5: Capture pre-state
+Compose ONE permission-change-helper spec: `op: "share"`, resource **`id:{location.folder_id}`** (bare folder ID from the pointer), recipient = target email, role = `reader`|`writer`. Owner reviews and Accepts. Never `aifs_share` directly.
 
-`aifs_get_permissions("/shared/client-intelligence/instances/{slug}/")`. Capture the current ACL — used for the `before` field in the helper spec and for filtering no-ops.
+**HARD GATE:** proceed only on outcome `"applied"`, OR — if the outcome file is missing/page-lifecycle-valued despite a confirmed Accept — an independent `aifs_get_permissions("id:{folder_id}")` confirming the grant (helper ≤0.4.0 race; fixed 0.4.1; fallback retained).
 
-### Step 6: Filter no-ops
+### Step 6: Update the pointer
 
-For each requested permission, map to the corresponding Drive role:
-- `view` → `reader`
-- `edit` → `writer` (Drive doesn't separately model edit-without-delete)
-- `delete` → `writer` (collection-layer enforced; Drive Writer is the FS-level grant)
+Overwrite the pointer's `scope`: move/add the target in `readers`/`collaborators` (object form `{"readers": [...], "collaborators": [...]}` replaces bare `"private"` on first grant). `last_updated` refreshed. Append a `permission_granted` event to the client's `changelog.json` (`id:{folder_id}/changelog.json`).
 
-Note: `edit` and `delete` both map to `writer` on Drive. If both are requested, only one `share` operation is needed. The collection-layer permission model (recording that the caller has BOTH edit and delete) requires a separate metadata layer, which V1 does not implement — instead, V1 trusts the Drive Writer grant as covering both. Future versions may add a per-instance `permissions.json` artifact to record finer-grained intent.
+### Step 7: Confirm
 
-For each (target, role) pair, check the pre-state. If the target already has the role (via inheritance or explicit grant): drop as a no-op.
-
-If the filtered list is empty: *"All requested permissions are already in place for `{member.display_name}` on `{slug}`. No changes needed."* Halt.
-
-### Step 7: Build the helper spec
-
-```json
-{
-  "version": "1.1",
-  "operations": [
-    {
-      "op": "share",
-      "resource": "/shared/client-intelligence/instances/{slug}/",
-      "recipient": "{member.email}",
-      "role": "{drive_role}",
-      "inherit": false,
-      "before": {"recipients": <pre_state.permissions>}
-    }
-  ],
-  "context": {
-    "requestor": "{caller.member_hash}",
-    "calling_task": "grant-permission",
-    "purpose": "Grant `{member.display_name}` ({permissions joined}) on client `{slug}` ({name}) with parent-inheritance override."
-  },
-  "mode": "fail_soft"
-}
-```
-
-(Typically a single operation. If view + edit are both requested, that's still one operation with role `writer`, since writer implies read.)
-
-**Note on `inherit: false`:** activated in client-intelligence 1.1.0 against agent-index-core 3.7.3's helper-spec v1.1 and gdrive adapter 2.3.0's actual implementation. The grant now correctly narrows below the all-members Writer inheritance from the parent `instances/` folder. The applying user (whoever clicks Accept on the review page) must have `organizer` role on the Shared Drive; non-organizer admins will see a clean `AccessDeniedError` with an actionable message. For org admins this works transparently.
-
-### Step 8: Invoke the helper
-
-Narrate to the caller:
-
-> *"Here's a link to open a review page in your browser. It'll show 1 share operation on `{slug}`. Click the link, then click Accept on the review page to apply it with your own credentials."*
-
-Invoke `permission-change-helper` with the spec.
-
-**Branch on outcome:**
-
-- **`applied`** — verify post-state via `aifs_get_permissions`. Confirm to caller (Step 9).
-- **`rejected`** — *"Grant cancelled. No permission changes applied."* Halt.
-- **`timed_out` / `page_closed`** — same as rejected; offer to retry.
-- **`partial_failure`** — surface failures. With a single operation, this is essentially `apply_error`.
-- **`apply_error`** — surface verbatim. Typical cause: caller lacks Drive sharing authority on the folder. Surface: *"You don't have permission to grant access on this client. Existing grantees and admins can grant; check `@ai:view-permissions {slug}` to see who currently has access."*
-- **`binary_not_found`** — halt with the install-incomplete message from Step 1's pre-check (rare here).
-
-### Step 9: Confirm to caller
-
-```
-`{member.display_name}` ({member.email}) now has {permissions joined} on `{slug}` ({name}).
-
-Drive Activity has recorded the share event. To revoke later, run @ai:revoke-permission {slug} {member.email}.
-```
-
----
-
-## V1 Limitations
-
-1. **Data visibility floor — PARTIALLY RESOLVED in client-intelligence 1.1.1.** As of agent-index-core 3.7.3 + gdrive adapter 2.3.0, `grant-permission` emits share operations with `inherit: false`, which sets `inheritedPermissionsDisabled: true` on the target instance folder. This correctly blocks write access inheritance from the immediate parent `/shared/client-intelligence/instances/` folder.
-
-   However, read access via grants rooted higher in the tree (e.g., a permissive reader grant on `/shared/client-intelligence/` itself) still flows through. Drive's `inheritedPermissionsDisabled` mechanism only blocks immediate-parent inheritance. The full fix is tracked as core-improvements idea `data-visibility-floor-ancestor-leak`; ships in 3.8.0 or later.
-
-   For confidential engagements, see `create-client.md` § "Data visibility floor" for the two operational patterns (codename and empty-shell + off-platform). The same patterns apply to grants applied via this task.
-
-2. **Permission audit history requires `aifs_get_audit`.** Drive Activity records the share events from the helper invocation, but no V1 task surfaces that history. `view-client-audit` is deferred to post-V1 pending access-control's `aifs_get_audit` adapter operation.
-
----
+*"`{target}` can now {read|read and write} `{name}`. They'll find it via `@ai:list-clients` (shared-with-me)."*
 
 ## Directives
 
-### Behavior
-
-Single-purpose and direct. The caller knows who they want to grant to and what; the task collects those, builds the helper spec, and invokes. If the caller is uncertain, suggest `@ai:view-permissions {slug}` first to see who currently has access.
-
-When mapping permissions to Drive roles, be transparent about the edit/delete collapse: if the caller asks "what's the difference between edit and delete?" explain that V1 maps both to Drive Writer, with the distinction being enforced at the task layer (delete-client checks for the recorded delete permission). Future versions may add finer granularity.
-
-### State Management
-
-Not stateful. The interview is in-memory; the helper invocation and post-state verification are real-time.
-
 ### Constraints
 
-- **Never call `aifs_share` directly.** All ACL changes go through the helper.
-- **Never grant to the caller themselves.** Step 3 enforces.
-- **Never bypass the helper outcome branch.** Continue only on `applied`.
-- **Never modify any collection-side file.** Drive Activity is the audit source; no local mirror.
+- **Owner-only.** No re-granting by recipients, no admin substitution (F12 lesson: validate and operate as the role the model assigns).
+- **Never `aifs_share` directly; never per-instance ACLs in the org tier.**
+- **Pointer scope must never claim a grant the Drive state doesn't back** (hard gate).
+- Soft semantics on the pointer (overwrite-only; it lives on the Shared Drive).
 
 ### Edge Cases
 
-- **Target member is in the org but doesn't have a member_hash recorded yet.** Run `@ai:invite-member` first (referral) or halt with that suggestion. V1 doesn't auto-invite.
-- **Target member is no longer in the org (revoked).** Surface: *"`{member.email}` is in the registry but isn't a current member. They've been removed. The grant would still apply at the Drive level, but they wouldn't be able to use it."* Allow if the caller confirms; useful for transition cases.
-- **Caller requests `view + edit + delete` but already has `view` and the target has `writer` inherited.** Step 6 filters out the no-op `view` (target already has read access); the `writer` grant is also a no-op (target already has writer via inheritance). Result: empty spec; halt at Step 6.
-- **Helper succeeds but post-state verification fails.** Likely Drive eventual-consistency lag. Retry the verification once with a 5-second pause; if still missing, surface a warning and treat the operation as applied but flag it for follow-up — the user should re-check via `@ai:view-permissions {slug}` after a minute.
+- Pointer exists but `aifs_stat("id:{folder_id}")` fails for the owner → folder moved/deleted outside agent-index; surface and suggest `@ai:list-clients` reconcile.
+- `partial_failure` (multi-grant future use) → pointer reflects only verified grants.
+- Owner's helper outcome `rejected` → nothing granted, nothing written; say so.
+- Target not yet a Drive account (consumer email typo etc.) → helper surfaces INVALID_RECIPIENT; relay verbatim.

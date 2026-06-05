@@ -36,17 +36,16 @@ List of members who will receive admin role on the collection at install time. A
 - Read `members-registry.json` via `aifs_read("/members-registry.json")` and present available members. Let the admin select one or more.
 - Store as an array of `member_hash` strings.
 
-### `default_permission_policy_preset` [org-mandated]
+### `clients_default_visibility` [org-mandated] (replaces 1.x `default_permission_policy_preset`)
 
-The collection-level default permission policy applied to every newly created client instance. This is one of three mechanisms that compose at instance creation (creator default unconditionally grants all three permissions to the creator + this collection policy + per-creation explicit grants from the create-client invocation). Editable post-install via `@ai:edit-default-permissions`.
+How create-client asks the visibility question. There is no ACL policy in 2.0 — access is structural per tier (private = owner-only until granted, in the member's own My Drive; org-public = uniform commons). Editable post-install via `@ai:edit-default-permissions`.
 
-- Default: `admin-only`
-- Ask: "What default access should new clients have? Three presets are available:
-  1. **admin-only** (default) — All admins receive view permission on every new client. Creators still control who else has access.
-  2. **open** — All collection members receive view permission on every new client. Edit and delete still require explicit grants.
-  3. **closed** — No automatic grants beyond the creator. Each new client is private until the creator explicitly shares it.
-  You can also customize the policy after install via `@ai:edit-default-permissions`."
-- Store the chosen preset name (`"admin-only"`, `"open"`, or `"closed"`). The Setup Completion step resolves it into the corresponding `grants` array.
+- Default: `private_first`
+- Ask: "When members create a client, which tier should be the default answer?
+  1. **private_first** (default) — private is pre-selected; org-public must be chosen explicitly. Best when members do a lot of personal prospecting.
+  2. **ask** — neutral prompt, no default.
+  3. **org_public_first** — org-public pre-selected. Best when the org treats client records as shared assets first (custody note: org-public records survive member departures; private ones leave with their owner)."
+- Store the chosen value.
 
 ### `install_example_template` [org-mandated]
 
@@ -70,13 +69,9 @@ After the admin answers all three parameters, present a confirmation summary and
 - `aifs_read("/org-config.json")` and confirm the installing member's `member_hash` appears in the `admins[]` array. If not, halt and instruct the admin to grant org admin role first.
 - `aifs_exists("/shared/client-intelligence/collection-state.json")` — if true, halt with the "already installed" message and branch to the repair path on admin confirmation.
 
-### 2. Resolve the default permission policy
+### 2. (Removed in 2.0.0)
 
-Resolve the `default_permission_policy_preset` choice into a concrete `grants` array:
-
-- `admin-only` → `[{"target": "group:admins", "permissions": ["view"]}]`
-- `open` → `[{"target": "group:all-members", "permissions": ["view"]}]`
-- `closed` → `[]`
+The 1.x default-permission-policy resolution is retired — no ACL policy exists. `clients_default_visibility` is stored as-is in collection-state and setup-responses.
 
 ### 3. Seed `collection-state.json`
 
@@ -84,28 +79,20 @@ Write `/shared/client-intelligence/collection-state.json` via `aifs_write`:
 
 ```json
 {
-  "version": "1.0.0",
+  "version": "2.0.0",
   "installed": "{ISO_TIMESTAMP}",
   "installed_by": "{installing_member_hash}",
   "bootstrap_admins": ["{member_hash_1}", "{member_hash_2}", ...],
   "example_template_installed": {true | false},
-  "default_permission_policy_preset": "{admin-only | open | closed}"
+  "clients_default_visibility": "{private_first | ask | org_public_first}"
 }
 ```
 
 This file is the canonical record that the collection is installed. Its existence is what later setup invocations check to detect "already installed."
 
-### 4. Seed `config/default-permissions.json`
+### 4. (Removed in 2.0.0)
 
-Write `/shared/client-intelligence/config/default-permissions.json` via `aifs_write`:
-
-```json
-{
-  "version": 1,
-  "last_updated": "{ISO_TIMESTAMP}",
-  "grants": {resolved_grants_from_step_2}
-}
-```
+`config/default-permissions.json` is retired. On upgrades from 1.x, if the file exists it is overwritten with `{"retired": "2.0.0"}` (see `upgrade/1-to-2.md`). The `config/` folder itself remains (admin roster derivation + future config).
 
 ### 5. Seed `templates/_changelog.json`
 
@@ -235,7 +222,6 @@ The ordering of grants (parent before children, tighter child overriding broader
 The helper's apply-script already verifies post-share state per operation, but for an install we also do task-side post-verification:
 
 - `aifs_read("/shared/client-intelligence/collection-state.json")` — confirm the write succeeded.
-- `aifs_read("/shared/client-intelligence/config/default-permissions.json")` — confirm.
 - `aifs_get_permissions("/shared/client-intelligence/")` — confirm the all-members Reader grant is present.
 - `aifs_get_permissions("/shared/client-intelligence/public-index/")` — confirm the all-members Writer grant.
 - `aifs_get_permissions("/shared/client-intelligence/templates/")` — confirm each bootstrap admin is a Writer.
@@ -251,18 +237,20 @@ Write a YAML record of the setup choices to `/setup/collection-setup-responses.m
 ```yaml
 ---
 collection: client-intelligence
-version: 1.0.0
+version: 2.0.0
 installed: "{ISO_TIMESTAMP}"
 installed_by: "{installer.display_name}"
 bootstrap_admins: [...]
-default_permission_policy_preset: "..."
+clients_default_visibility: "private_first"
 install_example_template: true
 ---
 ```
 
 ### 11. Confirm to admin
 
-> *"Client Intelligence is set up. {N} bootstrap admin(s), default permission policy: {preset}, example template: {installed | skipped}. Members can list available templates with `@ai:list-templates` or jump straight to creating a client with `@ai:create-client`. Admins can author new templates with `@ai:create-template` or edit the default permission policy with `@ai:edit-default-permissions`."*
+> *"Client Intelligence is set up. {N} bootstrap admin(s), default visibility prompt: {clients_default_visibility}, example template: {installed | skipped}. Clients are private-by-default in each member's own space, shareable per-person, or org-public in the commons — every client's name is org-discoverable (the visibility floor). Members can start with `@ai:create-client`; admins author templates with `@ai:create-template`."*
+
+**Note (2.0.0):** the same grant set in step 8 is also declared in the collection's `collaborative-acls.json`, so `install-collection` Step 5.5 can verify/re-apply it idempotently on upgrades (upgrade-collection Step 6.5 flags it).
 
 ---
 

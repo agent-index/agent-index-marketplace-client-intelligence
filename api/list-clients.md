@@ -1,9 +1,9 @@
 ---
 name: list-clients
 type: task
-version: 1.0.0
+version: 2.0.0
 collection: client-intelligence
-description: Member-facing read task that enumerates all clients in the collection. For each client, shows the name; for clients the caller has view permission on, additionally shows status, template, and creation metadata. Members without view access on a given client see only its name — that's the visibility floor in action.
+description: Member-facing read task that renders the org-wide client directory from the universal-floor pointer index. Every client's name, owner, tier, and status are visible to all members; data access is shown per the pointer's scope — mine / shared-with-me / org-public / name-only. Pointer-driven; no per-instance probing required.
 stateful: false
 produces_artifacts: false
 produces_shared_artifacts: false
@@ -11,125 +11,78 @@ dependencies:
   skills: []
   tasks: []
 external_dependencies:
-  - Remote filesystem access (adapter contract 2.0.0 or higher)
-reads_from: "/shared/client-intelligence/"
+  - Remote filesystem access (adapter 2.5.0+)
+reads_from: "/shared/client-intelligence/public-index/"
 writes_to: null
 ---
 
 ## About This Task
 
-List Clients is the directory of every client in the collection. Names are universally visible (the visibility floor); data is gated per-instance. The task enumerates `public-index/instances/`, surfaces the name + metadata for every client, and for each one probes whether the caller can read the underlying instance data — instances the caller can't read are surfaced as name-only with a `(no view)` annotation.
+List Clients is the org-wide client directory — the universal visibility floor rendered as a table. It enumerates `public-index/instances/` (the pointer index) and derives everything from the pointers themselves: who owns each relationship, which tier it lives in, and what the caller can do with it. No per-instance stat probing (the 1.x approach) — the pointer's `scope` already answers visibility:
 
-Authority is filesystem-enforced. Every collection member has read on `public-index/instances/` via the install-time setup grant to the all-members group. The per-instance probe uses `aifs_stat` (cheap) to determine visibility.
+- `org_public` → caller can view and edit (uniform commons access)
+- caller is `owner_hash` → **mine**
+- caller's email in `scope.readers` / `scope.collaborators` → **shared with me** (read / read+write)
+- otherwise → **name-only** (the floor: name, owner, template, status — data gated)
 
 ### Inputs
 
-- **`filter_status`** (optional) — `active` (default) / `archived` / `all`.
-- **`filter_template`** (optional) — only show clients created from a given template slug.
-- **`filter_name_prefix`** (optional) — case-insensitive name prefix.
-- **`sort_by`** (optional) — `name` (default) / `created` / `last_updated_in_public_index`.
+- **`filter_status`** (optional) — `active` (default) / `archived` / `all`. Archived includes `archived-moved-private` commons stubs.
+- **`filter_tier`** (optional) — `mine` / `shared-with-me` / `org-public` / `all` (default).
+- **`filter_template`**, **`filter_name_prefix`**, **`sort_by`** — as 1.x.
 
 ### Outputs
 
-A formatted table of clients surfaced to the caller. For each row:
-
-- Slug
-- Name
-- Status
-- Template (slug + version)
-- Created date
-- Visibility indicator: full row vs. name-only (visibility floor)
-
-If no clients exist, surface: *"No clients yet. Create one with `@ai:create-client`."*
-
----
+A table: Slug · Name · Owner · Tier/Access · Status · Template · Created. Departed-owner rows annotated. Ends with next-action hints.
 
 ## Workflow
 
-### Step 1: Pre-flight checks
+### Step 1: Pre-flight
 
-- `aifs_auth_status`. If not authenticated, attempt `aifs_authenticate`. If that fails, halt.
-- `aifs_exists("/shared/client-intelligence/collection-state.json")`. If false, halt with the not-installed message.
+`aifs_auth_status` (re-auth/halt); collection installed check. Read local `member-index.json` for `member_hash` + email.
 
-### Step 2: Enumerate public-index
+### Step 2: Enumerate and read pointers
 
-`aifs_list("/shared/client-intelligence/public-index/instances/")`. Filter to entries whose name ends in `.json` (drops `.gitkeep` and any non-data files).
+`aifs_list("/shared/client-intelligence/public-index/instances/")` → read each `{slug}.json`. Skip-and-note unparseable entries; never halt on one bad pointer. Permission-denied on the listing → install/provisioning broken; name the admin fix (`@ai:install-collection client-intelligence`).
 
-If the list returns permission-denied: *"You don't have read access to `/shared/client-intelligence/public-index/instances/`. This usually means the install is broken or the all-members grant was revoked. Contact your org admin."*
+### Step 3: Derive access per row
 
-If empty, surface the "no clients" message.
+Tag each row from the pointer alone (rules above). `owner_departed: true` → annotate "(owner departed — access governed outside agent-index{; adoptable by current recipients}" for private-tier rows. `scope: "revoked"` with active status → treat as name-only.
 
-### Step 3: Read each public-index entry
+### Step 4: Filters and sort
 
-For each `{slug}.json`, `aifs_read` and parse. Collect slug, name, template_slug, template_version, created, created_by, status.
+As 1.x, plus `filter_tier`. Default hides `archived`/`archived-moved-private`.
 
-If a single entry fails to read or parse, skip it and note the skip in a "skipped clients" section of the output. Don't halt.
-
-### Step 4: Apply filters
-
-- If `filter_status` is set and not `all`, filter rows to matching status.
-- If `filter_template` is set, filter rows where `template_slug` matches (case-sensitive).
-- If `filter_name_prefix` is set, filter rows where `name` (lowercased) starts with the prefix (lowercased).
-
-### Step 5: Probe per-instance visibility
-
-For each filtered entry, `aifs_stat("/shared/client-intelligence/instances/{slug}/")`. Tag each row:
-
-- **Success** (stat returns metadata): tag `visible: true`.
-- **Permission-denied**: tag `visible: false`.
-- **Path-not-found**: data-integrity issue (public-index entry without an instance folder). Tag `visible: missing` and note in a separate "broken" section.
-
-Probes can be batched conceptually but execute serially against the adapter (one `aifs_stat` per slug). For collections with many clients, performance is bounded by N stat calls.
-
-### Step 6: Apply sort
-
-Sort the filtered rows per `sort_by` (default: name, ascending, case-insensitive).
-
-### Step 7: Render the table
+### Step 5: Render
 
 ```
-| Slug | Name | Status | Template | Created | Visibility |
-|---|---|---|---|---|---|
-| acme-pharma | Acme Pharma | active | pharma-client v3 | 2026-05-13 | full |
-| globex-pharma | Globex Pharma | active | pharma-client v3 | 2026-04-22 | (no view) |
-| internal-codename-1 | Project Falcon | active | pharma-client v3 | 2026-05-01 | (no view) |
+| Slug | Name | Owner | Access | Status | Template | Created |
+|---|---|---|---|---|---|---|
+| acme-pharma | Acme Pharma | Bill | org-public (edit) | active | pharma-client v3 | 2026-05-13 |
+| globex | Globex | testproduction | shared with me (read) | active | pharma-client v3 | 2026-06-01 |
+| falcon | Project Falcon | jeff | name-only | active | pharma-client v3 | 2026-06-02 |
 ```
 
-For rows tagged `(no view)`, render only the slug, name, status, template, and created — the visibility-floor view. The data isn't accessed.
+Next-action hints: view (`@ai:view-client {slug}`), create, and for name-only rows: *"ask {owner} to share it (`@ai:grant-permission` is owner-run)"*.
 
-For rows tagged `visible: missing`, render a separate "data-integrity warnings" section:
+### Optional integrity pass (on request or anomaly)
 
-> *"{N} client(s) have public-index entries but no instance folder. This indicates a partial deletion or a write that didn't complete. An admin can investigate via the filesystem."*
-
-End with next-action suggestions:
-
-> *"To view a client's full data: `@ai:view-client {slug}`. To create a new client: `@ai:create-client`. To request access on a client you can't view: ask a current grantee or admin to run `@ai:grant-permission {slug} {your_email}`."*
-
----
+If the member asks for a health check (or a view-client just failed against a listed row): for **mine** rows, `aifs_stat("id:{location.folder_id}")`; for org-public rows, `aifs_exists(location.path + "instance.json")`. Report missing-data rows in a "data-integrity warnings" section. Never probe other members' private folders (it would fail by design, telling us nothing).
 
 ## Directives
 
 ### Behavior
 
-Read-only. The visibility-floor view is the headline UX — members see the full org-wide directory of client names, but data is gated per-instance. Be clear in the rendering that "(no view)" rows are not an error; they're the design.
-
-When asked broad questions ("which clients are pharma-related?"), apply filters where possible (template_slug, name_prefix) and run the task. When asked narrow questions about one specific client, chain into `@ai:view-client` rather than listing everything.
-
-### State Management
-
-Not stateful.
+Read-only; the floor is the headline UX — name-only rows are the design, not an error. Broad questions → filters; narrow questions about one client → chain into view-client.
 
 ### Constraints
 
-- **Never write anything.**
-- **Never call permission-modifying ops.**
-- **Never bypass the visibility floor** — for `visible: false` rows, do not attempt to read data through any side channel. The name-only view is the entire result for those rows.
-- **Never enumerate `instances/` directly** — enumerate `public-index/instances/`. The public-index is the authoritative directory for name-level discovery; `instances/` requires per-folder access and would silently omit clients the caller can't read.
+- **Never write; never call permission ops; never bypass the floor** (no side-channel reads on name-only rows).
+- **Never enumerate `instances/` or member spaces directly** — the pointer index is the directory. (Commons enumeration would miss every private client; member spaces can't be enumerated at all.)
 
 ### Edge Cases
 
-- **Public-index is empty.** Step 2 catches it. Surface the "no clients yet" message.
-- **All clients are `visible: false`.** Surface the name-only table with a note: *"You have view permission on 0 of {N} clients. Use `@ai:grant-permission` requests to ask for access on specific clients you need."*
-- **Public-index entry references a template that doesn't exist (deleted or renamed).** Show the row with the recorded `template_slug` even if the template is gone; flag in a note section.
-- **A status filter excludes everything.** Surface: *"No clients match the filter `status={status}`. Try `status=all` to see archived clients too."*
-- **Filesystem returns transient errors mid-enumeration.** Surface what was successfully listed and a note about the partial result.
+- Empty index → "No clients yet. Create one with `@ai:create-client`."
+- Pointer references a deleted template → render with recorded slug; flag in notes.
+- All rows name-only → note: *"You have data access on 0 of {N} clients — they're all private to their owners."*
+- Transient read errors → partial table + note.

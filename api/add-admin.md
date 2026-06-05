@@ -1,7 +1,7 @@
 ---
 name: add-admin
 type: task
-version: 1.0.0
+version: 2.0.0
 collection: client-intelligence
 description: Admin-only task to grant admin role to another member of the org. Admin role is derived from the filesystem - a collection admin is any member with Drive Editor access to /shared/client-intelligence/templates/ and /shared/client-intelligence/config/. This task batches two share operations (one per folder) into a single permission-change-helper invocation; the caller reviews and accepts both at once. Try-and-catch authority - only existing admins can complete the operation.
 stateful: false
@@ -139,7 +139,7 @@ They have Drive Editor on:
 - /shared/client-intelligence/templates/
 - /shared/client-intelligence/config/
 
-They can now author templates (@ai:create-template), edit the default permission policy (@ai:edit-default-permissions), and add/remove other admins (@ai:add-admin / @ai:remove-admin).
+They can now author templates (@ai:create-template), set the org's default visibility prompt (@ai:edit-default-permissions), and add/remove other admins (@ai:add-admin / @ai:remove-admin).
 
 To revoke admin role later, run @ai:remove-admin {member.email}.
 ```
@@ -176,4 +176,4 @@ Not stateful.
 
 ## V1 Note
 
-Admin role is derived from `templates/` write access. The `inherit` parameter limitation that affects per-instance tasks (`create-client`, `grant-permission`, `revoke-permission`) does NOT affect this task. `templates/` and `config/` don't have a permissive parent grant — their parent `/shared/client-intelligence/` is only `reader` for all-members. Sharing `templates/` and `config/` with a specific member as Writer narrows correctly under V1's helper spec; no Phase 5 dependency.
+Admin role is derived from `templates/` write access. (2.0 note: per-instance ACLs no longer exist — the inherit-limitation caveat that lived here is obsolete. `templates/` and `config/` remain admin-Writer / org-reader; sharing them to a specific member as Writer is a plain additive grant. The caller — an existing admin with Manager rights — Accepts, so F12 does not apply to THIS task.)

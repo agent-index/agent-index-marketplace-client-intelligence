@@ -1,0 +1,29 @@
+{
+  "version": "1.0",
+  "collection": "client-intelligence",
+  "description": "Declarative folder ACLs provisioned at install/upgrade via install-collection Step 5.5 (permission-change-helper, admin Accepts). Mirrors the setup bootstrap grant set so upgrades can verify/re-apply idempotently. IMPORTANT (2.0.0 upgrade ordering): the instances/ writer grant must not be applied to an org upgrading from 1.x until the admin has completed the gated-instance review in upgrade/1-to-2.md — 1.x instances may carry per-instance gating that this uniform grant would expose.",
+  "grants": [
+    {
+      "path": "/shared/client-intelligence/",
+      "recipient": "{all_members_group}",
+      "role": "reader",
+      "inherit": true,
+      "purpose": "Members can walk the collection tree (templates, indexes)."
+    },
+    {
+      "path": "/shared/client-intelligence/public-index/",
+      "recipient": "{all_members_group}",
+      "role": "writer",
+      "inherit": true,
+      "purpose": "Universal visibility floor: every member writes pointer records for the clients they create (both tiers)."
+    },
+    {
+      "path": "/shared/client-intelligence/instances/",
+      "recipient": "{all_members_group}",
+      "role": "writer",
+      "inherit": true,
+      "purpose": "Org-public tier commons: uniform member access to org-public client instances. UPGRADE GATE: see description — gated-instance review first on 1.x upgrades."
+    }
+  ],
+  "notes": "Admin grants on templates/ and config/ are per-member (bootstrap_admins + add-admin/remove-admin), not group-declarative — they stay in the setup bootstrap and admin tasks. Private-tier client folders live in members' own My Drives and are never provisioned here."
+}

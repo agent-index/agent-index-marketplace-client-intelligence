@@ -1,7 +1,7 @@
 ---
 name: edit-template
 type: task
-version: 1.0.0
+version: 2.0.0
 collection: client-intelligence
 description: Admin-only task to edit an existing client template. Supports field additions, removals, property changes (mandatory <-> optional), and renames. At each edit the admin chooses Migrate (apply the change to all existing instances created from this template) or No-impact (leave existing instances unchanged; the change applies only to instances created from this point forward). Writes a new version snapshot, updates the canonical template file, appends per-change entries to the collection-wide template changelog, and on the Migrate path walks every affected instance to apply the schema change with cross-referenced per-instance changelog entries.
 stateful: false

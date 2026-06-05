@@ -1,7 +1,7 @@
 {
-  "name": "revoke-permission",
+  "name": "transition-client",
   "type": "task",
-  "display_name": "Revoke Permission",
+  "display_name": "Transition Client",
   "collection": "client-intelligence",
   "collection_version": "2.0.0",
   "version": "2.0.0",
@@ -9,8 +9,8 @@
   "eol_warning_days": 60,
   "stateful": false,
   "produces_artifacts": false,
-  "produces_shared_artifacts": false,
-  "setup_template": "revoke-permission-setup.md",
+  "produces_shared_artifacts": true,
+  "setup_template": "transition-client-setup.md",
   "dependency_status": "complete",
   "missing_dependencies": [],
   "parameter_provenance": {},
@@ -21,10 +21,10 @@
     "tasks": []
   },
   "external_dependencies": [
-    "Remote filesystem access (adapter contract 2.0.0 or higher)",
-    "Permission-change-helper binary (Go or Node) at mcp-servers/permission-helper-*"
+    "Remote filesystem access (adapter 2.5.0+)",
+    "permission-change-helper binary 0.4.1+ at mcp-servers/permission-helper-go/"
   ],
   "optional_external_dependencies": [],
-  "reads_from": "/shared/client-intelligence/",
-  "writes_to": null
+  "reads_from": "/shared/client-intelligence/, id:{member_folder_id}/clients/",
+  "writes_to": "/shared/client-intelligence/, id:{member_folder_id}/clients/"
 }

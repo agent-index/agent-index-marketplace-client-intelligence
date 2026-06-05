@@ -1,7 +1,7 @@
 ---
 name: create-template
 type: task
-version: 1.0.0
+version: 2.0.0
 collection: client-intelligence
 description: Admin-only task to author a new client template. Interviews the admin for a slug, display name, and field list (each field mandatory or optional), then writes the template file plus an immutable v1 snapshot and appends a `template_created` event to the collection-wide template changelog.
 stateful: false

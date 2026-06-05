@@ -1,9 +1,9 @@
 ---
 name: view-permissions
 type: task
-version: 1.0.0
+version: 2.0.0
 collection: client-intelligence
-description: Read-only task that lists who has what permissions on a client instance. Calls aifs_get_permissions directly (this is the read op's primary purpose, not a guard). Surfaces the per-member ACL as a structured table.
+description: Show who can access a client and how. Org-public clients report uniform org access (by design — no per-instance ACL exists). Private clients report the pointer's declared scope cross-checked against live Drive permissions (aifs_get_permissions on the owner's folder — readable by the owner and grantees), flagging any drift between the two.
 stateful: false
 produces_artifacts: false
 produces_shared_artifacts: false
@@ -11,116 +11,59 @@ dependencies:
   skills: []
   tasks: []
 external_dependencies:
-  - Remote filesystem access (adapter contract 2.0.0 or higher)
-reads_from: "/shared/client-intelligence/"
+  - Remote filesystem access (adapter 2.5.0+)
+reads_from: "/shared/client-intelligence/public-index/, id:{folder_id}/"
 writes_to: null
 ---
 
 ## About This Task
 
-View Permissions shows the current ACL on a client instance. For each subject (individual member or group), it reports the Drive role (`reader`, `commenter`, `writer`) and whether the grant is explicit on the instance folder or inherited from a parent.
+View Permissions answers "who can see/edit this client?" per tier:
 
-This is the only V1 task where the agent calls `aifs_get_permissions` as its primary purpose rather than as a precondition check. The read is the function; the task's job is to format the result for human consumption.
+- **Org-public:** the answer is structural — *every org member, uniformly (writer), via the install-time commons grant*. Render that, plus the owner and the changelog-attribution note. No ACL read needed; optionally confirm the commons grant exists (`aifs_get_permissions` on `instances/`) when the caller doubts provisioning.
+- **Private:** two sources, cross-checked:
+  1. The pointer's declared `scope` (readers / collaborators) — what agent-index believes.
+  2. Live `aifs_get_permissions("id:{location.folder_id}")` — what Drive enforces. Works for the owner and grantees; a caller with no access gets the floor view instead ("private to {owner}").
+  Any mismatch (a grant Drive has that the pointer doesn't, or vice versa) is rendered as **drift** with a reconciliation suggestion (owner re-runs grant/revoke-permission, which repairs the pointer through the hard gate).
 
-Note: permission **history** ("when did Sarah get view? who granted it?") is NOT part of this task. That's the `view-client-audit` query, which is deferred to post-V1 pending the access-control `aifs_get_audit` operation. This task surfaces only the current state.
-
-### Inputs
-
-- **`slug`** (required, interactive or argument) — the instance to inspect.
-
-### Outputs
-
-A formatted table of permissions surfaced to the caller. For each subject:
-- Email or group address
-- Drive role (reader / commenter / writer)
-- Source: explicit on this instance / inherited from parent (with the parent path)
-- Permission ID (for diagnostics)
-
----
+Permission HISTORY remains out of scope (post-V1, `aifs_get_audit`); current state only. Grant changes are owner-run (`grant-permission` / `revoke-permission`) — this task never modifies anything.
 
 ## Workflow
 
-### Step 1: Pre-flight checks
+### Step 1: Pre-flight
 
-- `aifs_auth_status`. Halt if not authenticated.
-- `aifs_exists("/shared/client-intelligence/collection-state.json")`. Halt if false.
+Auth + installed checks.
 
-### Step 2: Resolve slug
+### Step 2: Resolve via pointer
 
-`aifs_exists("/shared/client-intelligence/public-index/instances/{slug}.json")`. Halt if false with the standard not-found message.
+Slug or name. Missing → list-clients guidance. Stub → follow the pointer.
 
-### Step 3: Read public-index entry (for context)
+### Step 3: Tier-resolved report
 
-`aifs_read("/shared/client-intelligence/public-index/instances/{slug}.json")`. Capture name, status, template_slug, created_by — used for the header in Step 5's output.
-
-### Step 4: Read permissions
-
-`aifs_get_permissions("/shared/client-intelligence/instances/{slug}/")`. Capture the full ACL.
-
-If the call returns permission-denied: surface *"You don't have permission to view the ACL on `{slug}`. This usually means you don't have any access on the instance. Run `@ai:view-client {slug}` to confirm — if you only see the name (visibility-floor view), you don't have view access either. Ask an existing grantee or admin to grant you via `@ai:grant-permission`."* Halt.
-
-If the call returns any other error, surface verbatim.
-
-### Step 5: Translate Drive roles to client-intelligence concepts
-
-The collection-layer permission model has three permissions: View, Edit, Delete. The Drive role mapping:
-
-- Drive `reader` → client-intelligence `view`
-- Drive `writer` → client-intelligence `view + edit + delete` (V1 collapses; future versions may distinguish)
-- Drive `commenter` → client-intelligence `view` (commenter ~= reader for our purposes; surface as `view` with a footnote)
-
-For each row in the ACL, compute the equivalent client-intelligence permissions.
-
-### Step 6: Render the table
+Org-public → structural answer (above). Private → declared scope + live read; for each subject render email, Drive role, source (the 2.0 model grants explicitly on the owned folder — inherited entries beyond the owner's ownership are themselves drift worth flagging), permission ID. Cross-check table:
 
 ```
-# Permissions on `{name}` ({slug})
-
-Status: {active | archived}
-Created by: {created_by_display_name} (creator — has view/edit/delete permanently)
-
-| Subject | View | Edit | Delete | Source |
-|---|---|---|---|---|
-| bill@agent-index.ai | ✓ | ✓ | ✓ | explicit (creator) |
-| alice@example.com | ✓ |   |   | explicit |
-| all@agent-index.ai | ✓ | ✓ | ✓ | inherited from /shared/client-intelligence/instances/ |
-| admins-group@... | ✓ |   |   | explicit |
+Subject                Pointer says     Drive says    Status
+jeff@agent-index.ai    reader           reader        OK
+jrohwer@gmail.com      collaborator     writer        OK
+sam@agent-index.ai     —                reader        DRIFT (granted outside agent-index)
 ```
 
-Annotate the creator row with `(creator)` and note that creator permissions are permanent (can't be revoked).
+`owner_departed: true` → banner: access is live but no longer governable through agent-index.
 
-If any grants are inherited from a parent folder, surface a note at the bottom:
+### Step 4: Suggestions
 
-> *"Note: {N} grant(s) on this client come from a parent folder's ACL, not from explicit shares on this instance. Until access-control Phase 5 ships the helper-spec extension for `inherit: false`, the all-members group has Writer inherited from `/shared/client-intelligence/instances/`, which means every collection member effectively has full access on every instance regardless of explicit grants. The visibility floor on names works (see `list-clients`); the visibility floor on data is degraded in V1. The codename pattern is the operational confidentiality mechanism."*
-
-End with next-action suggestions:
-
-> *"To grant additional access: `@ai:grant-permission {slug}`. To revoke: `@ai:revoke-permission {slug} {member}`. Note: the creator's permissions are permanent and cannot be revoked."*
-
----
+On drift: *"{owner} can reconcile: `@ai:grant-permission` / `@ai:revoke-permission` repair the pointer as they apply verified changes."* On no access (caller can't read the folder): floor view + ask-the-owner.
 
 ## Directives
 
-### Behavior
-
-Pure read. The output is informational and explicitly notes the V1 inheritance limitation so callers understand what the displayed permissions mean operationally.
-
-If the caller asks follow-up questions about history ("when did Alice get access?"), explain that V1 doesn't surface permission history — Drive Activity has the events but no V1 task queries them. Point at `view-client-audit` as a post-V1 capability.
-
-### State Management
-
-Not stateful.
-
 ### Constraints
 
-- **Never write anything.** Read-only.
-- **Never call `aifs_share`, `aifs_unshare`, or `aifs_transfer_ownership`.** This task displays state, doesn't change it.
-- **Always include the V1 inheritance note when inherited grants are present** in the ACL. Hiding the note would obscure the data-visibility-floor limitation.
-- **Always mark the creator row** with the permanence indicator. The Step 5 logic identifies the creator from the public-index entry's `created_by` field.
+- Read-only; never modifies grants or pointers (even on drift — reconciliation is the owner's verified action, not a silent fix).
+- Never bypass the floor.
 
 ### Edge Cases
 
-- **The caller has no access on the instance.** Step 4's permission-denied catches it; surface the standard guidance to request access.
-- **The ACL contains a subject not in the members-registry.** Display as raw email/group address with a footnote: *"Subject `{subject}` isn't in the org's members registry. This may be an external Drive share, a Google Group, or a stale grant."*
-- **The instance folder has been deleted but the public-index entry remains** (rare data-integrity case). Step 4's `aifs_get_permissions` returns path-not-found. Surface a data-integrity warning and exit.
-- **The ACL is empty.** Shouldn't happen — the creator-default grant should always be in place — but if it is, surface a warning: *"No permissions are recorded for `{slug}`. This is a data-integrity issue; the creator should have permanent access. Contact your org admin."*
+- `scope: "revoked"`/fully-private with active status → "only {owner}"; verify against the live read if caller is the owner.
+- get_permissions fails for a granted reader (rare propagation lag) → render declared scope with a "live check unavailable" note.
+- Org-tier caller asks "but can I gate it?" → explain the tier deal, point at transition-client.

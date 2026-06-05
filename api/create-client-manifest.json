@@ -3,8 +3,8 @@
   "type": "task",
   "display_name": "Create Client",
   "collection": "client-intelligence",
-  "collection_version": "1.1.1",
-  "version": "1.1.0",
+  "collection_version": "2.0.0",
+  "version": "2.0.0",
   "eol_date": null,
   "eol_warning_days": 60,
   "stateful": false,
@@ -24,10 +24,10 @@
     ]
   },
   "external_dependencies": [
-    "Remote filesystem access (adapter contract 2.0.0 or higher)",
-    "Permission-change-helper binary (Go or Node) at mcp-servers/permission-helper-*"
+    "Remote filesystem access (adapter 2.5.0+)",
+    "permission-change-helper binary 0.4.1+ at mcp-servers/permission-helper-go/"
   ],
   "optional_external_dependencies": [],
-  "reads_from": "/shared/client-intelligence/",
-  "writes_to": "/shared/client-intelligence/"
+  "reads_from": "/shared/client-intelligence/, id:{member_folder_id}/clients/",
+  "writes_to": "id:{member_folder_id}/clients/, /shared/client-intelligence/"
 }

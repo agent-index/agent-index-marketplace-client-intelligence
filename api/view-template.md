@@ -1,7 +1,7 @@
 ---
 name: view-template
 type: task
-version: 1.0.0
+version: 2.0.0
 collection: client-intelligence
 description: Member-facing read task that displays a specific template's current structure and version history. Shows the field list with mandatory/optional flags, version metadata, and a summary of changes from the template changelog. Any member with read access to /shared/client-intelligence/templates/ can run it.
 stateful: false

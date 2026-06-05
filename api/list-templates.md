@@ -1,7 +1,7 @@
 ---
 name: list-templates
 type: task
-version: 1.0.0
+version: 2.0.0
 collection: client-intelligence
 description: Member-facing read task that enumerates all templates available for client creation. Returns each template's slug, display name, current version, and field count. Any member with read access to /shared/client-intelligence/templates/ can run it.
 stateful: false

@@ -1,5 +1,60 @@
 # Changelog
 
+## [2.0.0] — 2026-06-05 — two-tier visibility model (MAJOR, breaking)
+
+### Requires Admin Attention (read BEFORE provisioning)
+
+**The upgrade ships ACL and setup-interview changes** (`collaborative-acls.json` is new;
+`clients_default_visibility` replaces `default_permission_policy_preset`) — upgrade-collection
+Step 6.5 will flag provisioning. **ORDERING RULE: run the gated-instance review in
+`upgrade/1-to-2.md` BEFORE `@ai:install-collection` applies the `instances/` all@ writer grant.**
+1.x instances may carry per-instance gating that the uniform grant would expose to the whole org.
+
+### Why a MAJOR
+
+The 1.x model had the *creator* apply per-instance Drive ACLs (with `inherit:false`) on folders
+under `/shared` — Drive permits folder-sharing on Shared Drives only to drive Managers
+(finding **F12**), so every non-admin `create-client` failed at the ACL step, and `inherit:false`
+additionally required organizer. The per-instance ACL model was unimplementable for its primary
+users. 2.0 replaces it with the two access models proven in the bug-reports and strategy reworks.
+
+### Changed
+
+- **Two visibility tiers.** PRIVATE (default): the instance lives in the member's own My Drive
+  (`id:{member_folder_id}/clients/{slug}/`, core 3.9.0 member spaces); the owner shares per-person
+  (share=reader, collaborator=writer) via permission-change-helper with their own Accept,
+  hard-gated on verified outcomes (strategy 1.1.3 precedent). ORG-PUBLIC: the instance lives in
+  the commons (`/shared/client-intelligence/instances/`) under uniform `all@` writer access with
+  mandatory changelog attribution on every edit (bug-reports precedent). No per-instance ACLs
+  exist anywhere — if a client needs gating, it belongs in the private tier.
+- **Universal visibility floor → pointer index.** `public-index/instances/{slug}.json` becomes a
+  full pointer record (name/owner/owner_hash/template/status/scope/location/owner_departed),
+  written at creation for BOTH tiers. Duplicate detection and relationship discovery preserved;
+  the 1.x ancestor-leak limitation is structurally dissolved (private data has no org ancestors).
+- **All 16 capabilities reworked or bumped to 2.0.0**; new task **transition-client** moves
+  clients between tiers (copy → pointer flip → source marked; commons originals become archived
+  stubs — going private does not un-publish). `grant/revoke-permission` are owner-only,
+  private-tier-only. `edit-default-permissions` now sets the org's creation-prompt default
+  (`clients_default_visibility`: private_first | ask | org_public_first) — no ACL policy exists.
+  `delete-client`: archival is the default verb; floor records are permanent; true deletion only
+  for owners in their own Drive.
+- **`config/default-permissions.json` retired** (overwritten `{"retired": "2.0.0"}` on upgrade).
+
+### Added
+
+- `collaborative-acls.json` — all@ reader on the collection root, all@ writer on `public-index/`
+  and `instances/` (same set the install bootstrap applies; now declaratively provisionable).
+- `upgrade/1-to-2.md` — REQUIRED MAJOR migration: admin inventory + gated-instance review +
+  pointer-index rebuild + policy-file retirement + provisioning order; member half is optional
+  (transition-client for keep-gated instances).
+
+### Requirements
+
+- agent-index-core **3.9.0+**, gdrive adapter **2.5.0+**, permission-helper-go **0.4.1+**.
+- 1.x line: `eol_date` set 90 days from this release (2026-09-03) per EOL policy.
+
+---
+
 ## [1.1.1] — <RELEASE_DATE> — companion to core 3.7.4
 
 ### Documentation

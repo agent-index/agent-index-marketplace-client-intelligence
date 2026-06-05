@@ -1,7 +1,7 @@
 ---
 name: remove-admin
 type: task
-version: 1.0.0
+version: 2.0.0
 collection: client-intelligence
 description: Admin-only task to revoke admin role from a member. Symmetric inverse of add-admin - unshares both /shared/client-intelligence/templates/ and /shared/client-intelligence/config/. Enforces a last-admin guardrail - the task refuses to leave the collection with zero admins. Uses permission-change-helper.
 stateful: false
@@ -72,7 +72,7 @@ Halt in both cases.
 
 ### Step 5: Confirmation
 
-> *"Remove `{member.display_name}` ({member.email}) as an admin on client-intelligence? They'll lose Editor access to `templates/` and `config/`, which means they can no longer author templates, edit the default permission policy, or add/remove admins. Their access to specific client instances (via grant-permission) is unaffected."*
+> *"Remove `{member.display_name}` ({member.email}) as an admin on client-intelligence? They'll lose Editor access to `templates/` and `config/`, which means they can no longer author templates, set the default visibility prompt, or add/remove admins. Their own clients (private or org-public) and any access others granted them are unaffected."*
 
 Wait for explicit yes/no.
 
@@ -147,7 +147,7 @@ Note: if the target had Editor via inheritance (e.g., drive owner), the unshare 
 ```
 `{member.display_name}` ({member.email}) is no longer an admin on client-intelligence.
 
-Drive Activity has recorded the unshare events. Their access to specific clients (via grant-permission) is unaffected.
+Drive Activity has recorded the unshare events. Their own clients and any grants others made to them are unaffected.
 
 To re-add them later, run @ai:add-admin {member.email}.
 ```
