@@ -1,7 +1,7 @@
 ---
 name: create-client
 type: task
-version: 2.0.0
+version: 2.1.0
 collection: client-intelligence
 description: Member-facing task to create a new client instance from a template. Interviews the member for template-defined field values, optional extension fields, and a client name, then asks the visibility question — private (default; stored in the member's own My Drive, shareable per-person later) or org-public (stored in the org commons under /shared, uniformly accessible to all members). Writes the instance, the universal-floor pointer, and the initial changelog. Private-tier per-creation grants go through permission-change-helper with the owner's Accept.
 stateful: false
@@ -146,6 +146,10 @@ Compose ONE permission-change-helper spec: an `op: "share"` per grant on resourc
 
 Private: *"Client `{name}` created — private, in your own space{, shared with N people}. Next: `@ai:view-client {slug}`, `@ai:grant-permission {slug}`, or `@ai:transition-client {slug}` to make it org-public."*
 Org-public: *"Client `{name}` created in the org commons — every member can view and edit it (edits are attributed in the changelog). Next: `@ai:view-client {slug}`."*
+
+### Optional instance subfolder: branding/ (added in 2.1.0)
+
+Instances MAY carry a `branding/` subfolder (client_display_name + client-logo) supplying slot values for brand-aware documents like `client-brief`. Not created at instance creation — `edit-client` creates it on first use. It inherits the instance's tier structurally.
 
 ## Directives
 

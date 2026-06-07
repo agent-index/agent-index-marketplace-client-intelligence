@@ -94,6 +94,8 @@ Admin role is derived from the filesystem — a collection admin is any member w
 3. Day-to-day use: admins author templates; members create clients from templates, share with collaborators, edit, and (eventually) archive or delete.
 4. New admins are granted via `@ai:add-admin` (which shares `templates/` and `config/` with them). Removing an admin is the reverse.
 
+- `client-brief` (any member with access) — Shareable client brief document; brand-styled when the org registers a brand-book provider. Instance `branding/` supplies the client logo/name as slot values.
+
 ## Version History
 
 See `CHANGELOG.md`.

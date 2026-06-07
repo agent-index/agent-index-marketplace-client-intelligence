@@ -1,8 +1,8 @@
 {
   "name": "client-intelligence",
   "display_name": "Client Intelligence",
-  "version": "2.0.0",
-  "description": "Primary repository of client-level knowledge. Admins author named templates that define mandatory and optional fields; members create client instances from templates and extend them with their own fields. v2.0.0 — two-tier visibility model (MAJOR, breaking): clients are PRIVATE by default (stored in the member's own My Drive, owner-applied sharing: share=read, collaborator=read+write, via permission-change-helper with verified outcomes) or ORG-PUBLIC (stored in the org commons under uniform all@ writer access with mandatory changelog attribution). New transition-client task moves clients between tiers. A universal visibility floor — one pointer record per client in public-index/ — keeps every client's name, owner, and tier org-discoverable while data is gated by tier. Replaces the 1.x per-instance ACL model, which Drive made impossible for non-admin creators (folder grants on Shared Drives are Manager-only — finding F12) and which carried the ancestor-leak limitation; both issues are structurally dissolved. Soft-delete semantics: floor records are permanent history; archival is the default lifecycle verb. Requires agent-index-core 3.9.0+ (My Drive member spaces), adapter 2.5.0+ (ID anchors), permission-helper-go 0.4.1+. 1.x upgrade requires the gated-instance review in upgrade/1-to-2.md BEFORE provisioning (data-exposure control).",
+  "version": "2.1.0",
+  "description": "Primary repository of client-level knowledge. Admins author named templates that define mandatory and optional fields; members create client instances from templates and extend them with their own fields. v2.0.0 \u2014 two-tier visibility model (MAJOR, breaking): clients are PRIVATE by default (stored in the member's own My Drive, owner-applied sharing: share=read, collaborator=read+write, via permission-change-helper with verified outcomes) or ORG-PUBLIC (stored in the org commons under uniform all@ writer access with mandatory changelog attribution). New transition-client task moves clients between tiers. A universal visibility floor \u2014 one pointer record per client in public-index/ \u2014 keeps every client's name, owner, and tier org-discoverable while data is gated by tier. Replaces the 1.x per-instance ACL model, which Drive made impossible for non-admin creators (folder grants on Shared Drives are Manager-only \u2014 finding F12) and which carried the ancestor-leak limitation; both issues are structurally dissolved. Soft-delete semantics: floor records are permanent history; archival is the default lifecycle verb. Requires agent-index-core 3.9.0+ (My Drive member spaces), adapter 2.5.0+ (ID anchors), permission-helper-go 0.4.1+. 1.x upgrade requires the gated-instance review in upgrade/1-to-2.md BEFORE provisioning (data-exposure control).",
   "author": "agent-index",
   "license": "open",
   "category": "client-management",
@@ -442,6 +442,26 @@
           "description": "Learn what the client-intelligence collection provides"
         }
       ]
+    },
+    {
+      "name": "client-brief",
+      "triggers": [
+        {
+          "phrase": "client brief",
+          "capability": "client-brief",
+          "description": "Produce a shareable client brief document"
+        },
+        {
+          "phrase": "brief for client",
+          "capability": "client-brief",
+          "description": "Produce a shareable client brief document"
+        },
+        {
+          "phrase": "client summary document",
+          "capability": "client-brief",
+          "description": "Produce a shareable client brief document"
+        }
+      ]
     }
   ],
   "provides": [
@@ -543,5 +563,21 @@
   ],
   "eol_date": null,
   "marketplace_url": "https://github.com/agent-index/agent-index-marketplace-client-intelligence",
-  "support_url": "https://agent-index.ai/support"
+  "support_url": "https://agent-index.ai/support",
+  "requires": [
+    {
+      "capability": "brand-book",
+      "capability_version": ">=1.0.0",
+      "required_operations": [
+        "get-brand-guidelines",
+        "get-element"
+      ],
+      "optional_operations": [
+        "get-template",
+        "get-asset"
+      ],
+      "required": false,
+      "fallback": "skip_with_notice"
+    }
+  ]
 }

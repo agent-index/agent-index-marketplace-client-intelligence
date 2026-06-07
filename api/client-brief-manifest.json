@@ -1,16 +1,16 @@
 {
-  "name": "view-template",
+  "name": "client-brief",
   "type": "task",
-  "display_name": "View Template",
+  "display_name": "Client Brief",
   "collection": "client-intelligence",
   "collection_version": "2.1.0",
-  "version": "2.0.0",
+  "version": "1.0.0",
   "eol_date": null,
   "eol_warning_days": 60,
   "stateful": false,
-  "produces_artifacts": false,
+  "produces_artifacts": true,
   "produces_shared_artifacts": false,
-  "setup_template": "view-template-setup.md",
+  "setup_template": "client-brief-setup.md",
   "dependency_status": "complete",
   "missing_dependencies": [],
   "parameter_provenance": {},
@@ -18,10 +18,7 @@
     "skills": [],
     "tasks": []
   },
-  "external_dependencies": [
-    "Remote filesystem access (adapter contract 2.0.0 or higher)"
-  ],
-  "optional_external_dependencies": [],
-  "reads_from": "/shared/client-intelligence/templates/",
+  "external_dependencies": [],
+  "reads_from": "/shared/client-intelligence/, instance locations (tier-resolved)",
   "writes_to": null
 }

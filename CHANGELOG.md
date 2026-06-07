@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.1.0] — 2026-06-07 — first brand-book consumer (companion to core 3.10.0 / marketplace 2.10.0 / brand-book 1.0.0)
+
+### Added
+
+- **`requires[]`: brand-book** (`required: false`, `fallback: skip_with_notice`) — the first consumer declaration in agent-index. Resolution per the new `/internal/resolve-brand.md` (single-provider auto-bind; personal-element precedence; slot values from instance context; degrade-never-block).
+- **`client-brief` task** — shareable client brief document (markdown/docx) from an instance, tier-mechanical access, LOCAL output, brand-styled when a provider is registered.
+- **Instance `branding/` context** — `edit-client` manages `client_display_name` + `client-logo` INSIDE the instance (structural tier inheritance); these are SLOT VALUES for org-branded templates — the brand book never holds client assets.
+
+### Requires Admin Attention
+
+- Requires core 3.10.0 + marketplace 2.10.0. Install/register brand-book 1.0.0 to activate styling; without it everything works unbranded.
+
 ## [2.0.0] — 2026-06-05 — two-tier visibility model (MAJOR, breaking)
 
 ### Requires Admin Attention (read BEFORE provisioning)

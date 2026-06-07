@@ -1,7 +1,7 @@
 ---
 name: edit-client
 type: task
-version: 2.0.0
+version: 2.1.0
 collection: client-intelligence
 description: Modify a client instance's data — template field values, extension fields. Tier-resolved via the universal-floor pointer; write authority is mechanical (org-public = any member with mandatory changelog attribution; private = owner and collaborators). Revision-aware writes; every edit appends an attributed changelog event.
 stateful: false
@@ -65,6 +65,13 @@ Show a before→after diff summary. No writes before explicit confirmation.
 ### Step 8: Confirm
 
 What changed, who's attributed, where it lives.
+
+### Branding for documents (added in 2.1.0)
+
+The member may set the instance's document-branding context, stored INSIDE the instance (tier-inherited, never org-readable unless the instance is):
+- `branding/branding.json` — `{client_display_name}` (how the client is named on documents).
+- `branding/client-logo.{png|svg|jpg}` — the client's logo for template slots. Upload via the member's local file; size guard >2MB warn (base64 transport).
+These feed `client-brief` (and any future brand-aware surface) as SLOT VALUES — the org's brand book defines where/how they appear; this instance owns what they are. Writes use the same tier mechanics as all instance edits (org path or `id:` anchor) and append a changelog event.
 
 ## Directives
 
