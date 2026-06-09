@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.1.1] — 2026-06-08 — inline brand resolution (int4)
+
+### Changed
+
+- `client-brief` Step 3 now inlines the brand-resolution logic (provider lookup via the registry, id-anchored provider read base, personal-element precedence, instance-branding slot values, degrade-never-block) instead of referencing `/internal/resolve-brand.md`. Members cannot read collection `/internal/` files at runtime (not synced locally; not path-resolvable on the org remote — bug 20260608 int4), so the referenced mechanism never executed. `/internal/resolve-brand.md` remains as authoring documentation. Also adopts id-anchored provider addressing (core 3.10.1) and registry-sourced `brand_book_version` (avoids the db13 name-resolution path).
+
 ## [2.1.0] — 2026-06-07 — first brand-book consumer (companion to core 3.10.0 / marketplace 2.10.0 / brand-book 1.0.0)
 
 ### Added

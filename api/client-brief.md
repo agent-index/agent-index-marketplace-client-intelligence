@@ -1,7 +1,7 @@
 ---
 name: client-brief
 type: task
-version: 1.0.0
+version: 1.0.1
 collection: client-intelligence
 description: Produce a shareable client brief document (markdown or docx) from a client instance — template fields, extensions, recent activity — brand-styled when the org has a brand-book provider registered.
 stateful: false
@@ -33,8 +33,17 @@ Client (slug or name); format (`markdown` | `docx`, default markdown); optional 
 ### Step 2: Resolve and Read the Instance
 Identical mechanics to view-client Steps 2–3 (pointer → tier-resolved read of `instance.json` + `changelog.json`; private-tier ACCESS_DENIED → floor view guidance and HALT — no document for instances you can't read).
 
-### Step 3: Resolve the Brand
-Follow `/internal/resolve-brand.md` with `artifact_type: "client-brief"`, the chosen format, and slot values from the instance's `branding/` (Step 4 there). The brief composes UNBRANDED with a notice when no provider is registered — never blocked.
+### Step 3: Resolve the Brand (inline — int4, 2.1.1)
+
+Resolution is inlined here rather than referencing `/internal/resolve-brand.md`, because members cannot read collection `/internal/` files at runtime (they aren't synced locally and can't be path-resolved on the org remote — bug 20260608 int4). The steps:
+
+1. **Find the provider.** `aifs_read("/org-config.json")` → `capability_providers["brand-book"].providers`. Empty/absent → **no brand**: compose UNBRANDED with a one-line notice ("Brand styling not configured — install and register a brand-book provider to enable it"); skip the rest of Step 3. Exactly one provider → use it. Multiple → V1 isn't configured for multi-provider binding; compose unbranded with a notice.
+2. **Resolve the provider's read base (id-anchored, core 3.10.1).** Find the provider collection's entry in `installed_collections[]`; `base = "id:{folder_id}"` if present, else `/{provider_collection}`. `brand_book_version` = the provider's `capability_version` from the registry (authoritative; do NOT depend on name-resolving the provider's collection.json — bug db13).
+3. **Fetch once (read-only provider ops, executed from `{base}/api/...`):** `get-brand-guidelines(artifact_type:"client-brief", format, sections:all)`; `get-template("client-brief", format)` (optional — absent → native structure); for each element the composition uses, `get-element(name, format)` (`rendering_missing`/`found:false` → native default for that element).
+4. **Personal-element precedence.** Read LOCAL `members/{member_hash}/brand-book/personal/elements/{slug}.json` (native tools): if registry `provider_config.brand_usage == "optional"`, personal overrides org; if `"required"`, org wins and personal applies only to element types the org hasn't defined.
+5. **Slot values** come from THIS instance's `branding/` (read with the same tier mechanics as the instance: org-public path or `id:{folder_id}`): `client-logo.*` and `branding.json` `client_display_name`. A slot with no value: render a marked placeholder if the template marks it required, else omit.
+
+**Failure rule:** any failure in steps 1–5 (unreadable registry, corrupt provider files, missing op) degrades to UNBRANDED composition with a specific notice — brand resolution never blocks or fails the brief.
 
 ### Step 4: Compose
 Sections (template-driven when get-template found `client-brief`, else native order): title block (client display name; `client-logo` slot per template placement), summary (template fields), extensions, status & ownership (metadata-block element), recent activity (table element, last 10 changelog entries), footer. Apply org voice to connective prose. For docx: use the document-generation skill per its SKILL.md after composition is fully determined.
