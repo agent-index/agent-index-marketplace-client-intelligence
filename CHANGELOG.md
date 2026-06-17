@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.2.0] — 2026-06-17 — branded interactive client views (directory + profile)
+
+### Added
+
+- **`list-clients` branded interactive view (default in Cowork).** When a brand-book provider supplies the `client-list` template, `list-clients` now composes an interactive directory from the template's elements (per-item cards under a header) instead of only the markdown table. The template's action buttons are wired to live flows: page-level **Add client** → `create-client`; per-card **View** → `view-client`, **Edit** → `edit-client`, **Archive** → `delete-client` (`mode: archive`, soft; the floor record survives). Buttons run the mapped task with its own confirmation gate and authority check; the directory re-renders after a flow completes.
+- **Standalone export.** On request, `list-clients` renders the directory to a standalone artifact — HTML / PDF / Word / markdown — from the brand-book renderings (action buttons omitted in static formats). Exports are local; they never write the commons or change client data. `produces_artifacts` flips to `true`.
+- **`view-client` branded interactive profile (default in Cowork).** When a brand-book provider supplies the `client-profile` template, `view-client` composes a branded profile from the template's elements (a header over detail/field/activity sections) with record actions wired to flows: **Edit** → `edit-client`; **Manage access** → `view-permissions` / `grant-permission` / `revoke-permission`; **Generate brief** → `client-brief`; **Change visibility** → `transition-client`; **Archive** → `delete-client` (`mode: archive`). Actions are authority/tier-gated; a name-only floor view shows no record actions. Falls back to the plain record when no provider is present, and can export the profile (HTML/PDF/Word/markdown) on request. Brand resolution inlined per int4. `produces_artifacts` → `true`.
+- Brand resolution is **inlined** in `list-clients` Step 5 (id-anchored provider base, registry-sourced `brand_book_version`, personal-element precedence, degrade-never-block), consistent with the int4 fix in `client-brief` 2.1.1 — members can't read `/internal/` at runtime.
+
+### Consumer mapping (brand-book convention v1.1)
+
+- Implements the brand-book "action markers" convention: the `client-list` template declares neutral action handles (`add` / `edit` / `archive`) in its `action_contract`; this collection maps each to one of its own tasks. The brand book never names a client-intelligence task. Requires brand-book ≥ 1.1.0 for the `client-list` template + interactive-template schema fields (still `required: false`, `fallback: skip_with_notice` — older/absent brand books degrade to the table).
+
+
 ## [2.1.1] — 2026-06-08 — inline brand resolution (int4)
 
 ### Changed

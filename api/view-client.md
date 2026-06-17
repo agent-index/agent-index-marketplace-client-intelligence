@@ -1,17 +1,19 @@
 ---
 name: view-client
 type: task
-version: 2.0.0
+version: 2.1.0
 collection: client-intelligence
-description: Member-facing read task that displays a client's full data and recent changelog. Tier-resolved via the universal-floor pointer — org-public clients read from the commons; private clients read from the owner's space by folder ID (succeeds only for the owner and grantees). Callers without access get the floor view (name, owner, tier) plus how to ask the owner.
+description: Member-facing read task that displays a client's full data and recent changelog. Tier-resolved via the universal-floor pointer — org-public clients read from the commons; private clients read from the owner's space by folder ID (succeeds only for the owner and grantees). Callers without access get the floor view (name, owner, tier) plus how to ask the owner. When a brand-book provider supplies the `client-profile` template, renders a branded, interactive Cowork profile (with Edit / Manage access / Generate brief / Change visibility / Archive) by default; otherwise renders the plain record. Can export the profile to a standalone HTML / PDF / Word artifact on request.
 stateful: false
-produces_artifacts: false
+produces_artifacts: true
 produces_shared_artifacts: false
 dependencies:
   skills: []
   tasks: []
 external_dependencies:
   - Remote filesystem access (adapter 2.5.0+)
+optional_capabilities:
+  - "brand-book (get-template/get-element/get-brand-guidelines) — enables the branded interactive profile and standalone exports; degrades to the plain record when absent. Resolution is inlined in Step 4 (members can't read /internal/ at runtime — int4)."
 reads_from: "/shared/client-intelligence/public-index/, /shared/client-intelligence/instances/, id:{folder_id}/"
 writes_to: null
 ---
@@ -39,9 +41,39 @@ Accept slug or name (name → search the pointer index; multiple matches → dis
 
 Per the rules above. Read `instance.json` fully; read `changelog.json` and take the most recent 10 entries (offer the rest on request). On private-tier ACCESS_DENIED → floor view + ask-the-owner guidance (never retry via other paths). On org-tier permission-denied → provisioning broken; name the admin fix (`@ai:install-collection client-intelligence`).
 
-### Step 4: Render
+### Step 4: Resolve brand (inline — int4)
 
-Name, slug, tier (+ caller's access: yours / shared with you (read|write) / org-public), owner (+ departed annotation if `owner_departed`), template + version, status, template fields, extension fields, created/last-updated, recent changelog (actor + event + timestamp). End with relevant verbs: edit (if writable), grant/revoke (owner, private tier), transition (owner).
+Inlined (members can't read `/internal/` at runtime — bug 20260608 int4; `/internal/resolve-brand.md` is authoring docs only):
+
+1. **Find the provider.** `aifs_read("/org-config.json")` → `capability_providers["brand-book"].providers`. Empty/absent/multiple → **no brand**: go to Step 5b (plain record) with a one-line notice.
+2. **Provider read base (id-anchored).** Provider collection in `installed_collections[]`; `base = "id:{folder_id}"` if present else `/{provider_collection}`. `brand_book_version` = the provider's registry `capability_version`.
+3. **Fetch once (read-only ops from `{base}/api/...`):** `get-template("client-profile", "html")` — `client-profile` is THIS collection's record artifact type; whatever brand template the org published under that name is used (`found:false`/failure → Step 5b). For **each element named in the returned template's `sections`** (no hardcoded element names): `get-element(name, "html")` (tokens resolve against `/shared/brand-book/tokens/*`); per-element `found:false`/`rendering_missing` → native default for that element.
+4. **Personal-element precedence** as elsewhere (optional → personal wins; required → org wins except where org-undefined).
+5. **Slot value.** `client-logo` for the header badge comes from the instance's `branding/` read at the client's tier; absent → initials badge.
+
+**Failure rule:** any failure degrades to Step 5b — brand resolution never blocks the view.
+
+### Step 5a: Render — branded interactive profile (default in Cowork)
+
+When Step 4 produced a template AND the surface is Cowork: compose the profile from the template's `sections` — its header element (badge/logo, name, kind · tier + status) over its detail sections for the template fields, the extension fields, and recent activity (date → event from the changelog). Fill the header's `marker_fills` actions, mapping each `action_contract` handle to this collection's flow:
+
+| Template handle | Scope | This collection runs |
+|---|---|---|
+| `edit` | record | **edit-client** for this slug |
+| `manage-access` | record | **view-permissions** (who has access) → **grant-permission** / **revoke-permission** to change (owner-run, private tier) |
+| `brief` | record | **client-brief** for this slug |
+| `transition` | record | **transition-client** (private ⇄ org-public) |
+| `archive` | record, `confirm` | **delete-client** `mode: archive` (soft; floor record survives) |
+
+The button emits its handle (+ slug) back into the session; on click, run the mapped task per its own definition and confirmation gate, then re-render. **Gate by authority and tier:** show only actions the caller can perform — e.g. `edit` only when the caller has write access; `manage-access` / `transition` / `archive` for org-public (any member) or, in the private tier, the owner only. On a name-only floor view (private, no access) render the identity block plus the "ask {owner} to share it" guidance and **no record actions**.
+
+### Step 5b: Render — plain record (fallback / on request)
+
+When there is no brand template, the surface isn't Cowork, or the member asks for "plain": Name, slug, tier (+ caller's access: yours / shared with you (read|write) / org-public), owner (+ departed annotation if `owner_departed`), template + version, status, template fields, extension fields, created/last-updated, recent changelog (actor + event + timestamp). End with relevant verbs: edit (if writable), grant/revoke (owner, private tier), transition (owner).
+
+### Step 6: Export on request (standalone artifact)
+
+If the member asks to export/save the profile: render the same composition to the requested format from the template's `surfaces.export_formats` — `html`, `pdf`, `docx`, or `markdown` (the docx/pdf double as a printable client one-pager). Action buttons are omitted in static formats. Save the file as an artifact and link it; never write the commons or change client data. (For a richer narrative brief, `client-brief` remains the dedicated document task.)
 
 ## Directives
 

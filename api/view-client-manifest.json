@@ -3,12 +3,12 @@
   "type": "task",
   "display_name": "View Client",
   "collection": "client-intelligence",
-  "collection_version": "2.1.1",
-  "version": "2.0.0",
+  "collection_version": "2.2.0",
+  "version": "2.1.0",
   "eol_date": null,
   "eol_warning_days": 60,
   "stateful": false,
-  "produces_artifacts": false,
+  "produces_artifacts": true,
   "produces_shared_artifacts": false,
   "setup_template": "view-client-setup.md",
   "dependency_status": "complete",
@@ -21,7 +21,9 @@
   "external_dependencies": [
     "Remote filesystem access (adapter contract 2.0.0 or higher)"
   ],
-  "optional_external_dependencies": [],
+  "optional_external_dependencies": [
+    "brand-book capability (get-template/get-element/get-brand-guidelines) — branded interactive profile + standalone exports; degrades to plain record when absent"
+  ],
   "reads_from": "/shared/client-intelligence/",
   "writes_to": null
 }
