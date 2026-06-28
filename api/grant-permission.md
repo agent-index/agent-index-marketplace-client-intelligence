@@ -1,7 +1,7 @@
 ---
 name: grant-permission
 type: task
-version: 2.0.0
+version: 2.3.0
 collection: client-intelligence
 description: Grant access on a PRIVATE-tier client to a member — share (reader) or collaborator (read+write). Owner-only — the grant is a Drive permission on a folder the owner owns in their own My Drive, applied through permission-change-helper with the owner's Accept. Org-public clients have uniform access by design; this task explains and offers transition-client instead.
 stateful: false
@@ -67,7 +67,7 @@ Compose ONE permission-change-helper spec: `op: "share"`, resource **`id:{locati
 
 ### Step 6: Update the pointer
 
-Overwrite the pointer's `scope`: move/add the target in `readers`/`collaborators` (object form `{"readers": [...], "collaborators": [...]}` replaces bare `"private"` on first grant). `last_updated` refreshed. Append a `permission_granted` event to the client's `changelog.json` (`id:{folder_id}/changelog.json`).
+Overwrite the pointer's `scope`: move/add the target in `readers`/`collaborators` (object form `{"readers": [...], "collaborators": [...]}` replaces bare `"private"` on first grant). `last_updated` refreshed. **If the pointer's `location` lacks `item_drive_id`** (a pre-C.1.3 client), `aifs_stat("id:{location.folder_id}")` once and write the returned `drive_id` into `location.item_drive_id` — without it the grantee on OneDrive can discover the client but not open it (C.1.3 `crossdriveread`: the recipient opens via `id:{item_drive_id}:{folder_id}/...`). Append a `permission_granted` event to the client's `changelog.json` (`id:{folder_id}/changelog.json`).
 
 ### Step 7: Confirm
 

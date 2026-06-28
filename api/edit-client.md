@@ -1,7 +1,7 @@
 ---
 name: edit-client
 type: task
-version: 2.1.0
+version: 2.3.0
 collection: client-intelligence
 description: Modify a client instance's data — template field values, extension fields. Tier-resolved via the universal-floor pointer; write authority is mechanical (org-public = any member with mandatory changelog attribution; private = owner and collaborators). Revision-aware writes; every edit appends an attributed changelog event.
 stateful: false
@@ -40,7 +40,7 @@ Slug or name → pointer. `status: archived` → *"Archived clients aren't edita
 
 ### Step 3: Tier-resolved paths
 
-Org-public → base = `location.path`. Private → base = `id:{location.folder_id}/`. All subsequent reads/writes use the base.
+Org-public → base = `location.path`. Private → base = the cross-drive anchor `id:{location.item_drive_id}:{location.folder_id}/` when the pointer carries `item_drive_id` (a private client lives on the owner's drive — C.1.3 `crossdriveread`), falling back to the bare `id:{location.folder_id}/` only for older pointers and the caller's OWN clients on their own drive; the qualified form is what lets a collaborator on OneDrive open a client shared to them (a bare anchor 404s against the caller's own drive), and it is OneDrive parity and harmless on gdrive. All subsequent reads/writes use the base.
 
 ### Step 4: Read instance with revision capture
 

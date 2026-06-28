@@ -1,7 +1,7 @@
 ---
 name: create-client
 type: task
-version: 2.1.0
+version: 2.3.0
 collection: client-intelligence
 description: Member-facing task to create a new client instance from a template. Interviews the member for template-defined field values, optional extension fields, and a client name, then asks the visibility question — private (default; stored in the member's own My Drive, shareable per-person later) or org-public (stored in the org commons under /shared, uniformly accessible to all members). Writes the instance, the universal-floor pointer, and the initial changelog. Private-tier per-creation grants go through permission-change-helper with the owner's Accept.
 stateful: false
@@ -110,7 +110,7 @@ Compose `instance.json` (as 1.x, plus `"visibility": "private"|"org_public"`) an
 **Private tier:**
 1. `aifs_write("id:{member_folder_id}/clients/{slug}/instance.json", ...)`
 2. `aifs_write("id:{member_folder_id}/clients/{slug}/changelog.json", ...)`
-3. `aifs_stat("id:{member_folder_id}/clients/{slug}")` → record `client_folder_id`.
+3. `aifs_stat("id:{member_folder_id}/clients/{slug}")` → record `client_folder_id` (the `id`) **and `item_drive_id` (the returned `drive_id`, adapter 2.3.0+)**. The private client lives on the owner's own My Drive, so capturing `drive_id` is what lets a grantee open it cross-drive (C.1.3 `crossdriveread`) — a bare `id:{client_folder_id}` resolves against the *recipient's* drive and 404s on OneDrive even with the grant present.
 
 **Org-public tier:**
 1. `aifs_write("/shared/client-intelligence/instances/{slug}/instance.json", ...)`
@@ -129,10 +129,12 @@ On permission-denied in the org tier: the install's provisioning is incomplete �
   "owner": "{display_name}", "owner_hash": "{member_hash}",
   "status": "active",
   "scope": "private" | "org_public",
-  "location": {"folder_id": "{client_folder_id}"} | {"path": "/shared/client-intelligence/instances/{slug}/"},
+  "location": {"folder_id": "{client_folder_id}", "item_drive_id": "{item_drive_id}"} | {"path": "/shared/client-intelligence/instances/{slug}/"},
   "created": "{ISO}", "last_updated": "{ISO}", "owner_departed": false
 }
 ```
+
+For a private client, `location` carries **`item_drive_id`** (the owner's home drive for the folder, from Step 10's stat; C.1.3 `crossdriveread`) alongside `folder_id` — this is what lets a grantee on OneDrive open the client where it physically lives on the owner's personal drive. Org-public clients live in the SharePoint site drive and use the `path` form, so they carry no `item_drive_id`.
 
 For a private client with per-creation grants, `scope` becomes `{"readers": [...], "collaborators": [...]}` — but ONLY after Step 12's gate; write it as `"private"` now.
 

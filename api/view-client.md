@@ -1,7 +1,7 @@
 ---
 name: view-client
 type: task
-version: 2.1.0
+version: 2.3.0
 collection: client-intelligence
 description: Member-facing read task that displays a client's full data and recent changelog. Tier-resolved via the universal-floor pointer — org-public clients read from the commons; private clients read from the owner's space by folder ID (succeeds only for the owner and grantees). Callers without access get the floor view (name, owner, tier) plus how to ask the owner. When a brand-book provider supplies the `client-profile` template, renders a branded, interactive Cowork profile (with Edit / Manage access / Generate brief / Change visibility / Archive) by default; otherwise renders the plain record. Can export the profile to a standalone HTML / PDF / Word artifact on request.
 stateful: false
@@ -24,7 +24,7 @@ View Client renders a client's full record: template fields, extension fields, m
 
 1. Resolve the client via its pointer at `/shared/client-intelligence/public-index/instances/{slug}.json`.
 2. `org_public` → read `instance.json` + `changelog.json` from `location.path` (every member can).
-3. Private → read via `id:{location.folder_id}/...`. This succeeds for the owner and anyone the owner has granted; for everyone else Drive returns ACCESS_DENIED — which IS the floor working: render the pointer's name/owner/template/status and say *"`{name}` is private to {owner}. Ask them to share it (granting is owner-run: `@ai:grant-permission`)."*
+3. Private → read via the cross-drive anchor `id:{location.item_drive_id}:{location.folder_id}/...` when the pointer carries `item_drive_id` (a private client lives on the owner's drive — C.1.3 `crossdriveread`), falling back to the bare `id:{location.folder_id}/...` only for older pointers that predate it and for the caller's OWN clients on their own drive. The qualified form is what lets a grantee on OneDrive open a client the owner shared to them — a bare anchor would resolve against the *caller's* drive and 404 even with the grant present; on gdrive the bare anchor already reaches shared items, so the qualified form is OneDrive parity and harmless there. This succeeds for the owner and anyone the owner has granted; for everyone else Drive returns ACCESS_DENIED — which IS the floor working: render the pointer's name/owner/template/status and say *"`{name}` is private to {owner}. Ask them to share it (granting is owner-run: `@ai:grant-permission`)."* Never fall back to an external connector on a 404 — repair `item_drive_id` instead (standards § "Reads go through aifs only").
 4. `archived` / `archived-moved-private` statuses → say so; for moved stubs, follow the pointer to the current location instead of rendering the stub.
 
 ## Workflow
