@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.3.0] — 2026-06-28 — Release C.1.3: crossdriveread
+
+### Fixed
+- **`crossdriveread`** — `create-client` and `grant-permission` capture `item_drive_id` from `aifs_stat`'s `drive_id` into the client pointer's `location`; `view-client`/`edit-client` open private clients shared to them via the cross-drive anchor `id:{item_drive_id}:{folder_id}/...` (bare-anchor fallback). Fixes opening a client instance held in another member's personal OneDrive. Requires onedrive adapter 2.3.0+; harmless on gdrive.
+
 ## [2.2.0] — 2026-06-17 — branded interactive client views (directory + profile)
 
 ### Added
