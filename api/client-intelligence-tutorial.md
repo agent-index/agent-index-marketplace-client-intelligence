@@ -1,7 +1,7 @@
 ---
 name: client-intelligence-tutorial
 type: skill
-version: 2.0.0
+version: 2.0.1
 collection: client-intelligence
 description: Explains the client-intelligence collection to members — templates, the two visibility tiers (private in your own Drive vs. org-public in the commons), the universal visibility floor, sharing, custody, and lifecycle — through a guided tour or targeted answers.
 stateful: false
@@ -37,7 +37,7 @@ Admins author templates (`@ai:create-template`) defining mandatory and optional 
 
 **Topic 4: Sharing a private client**
 
-Same vocabulary as everywhere in agent-index: *share with X* → X can read; *make X a collaborator* → X can read and write. `@ai:grant-permission {slug}` (owner-only — it's your folder; you click Accept on the permission review page and the grant applies with your credentials). `@ai:revoke-permission` is the inverse. `@ai:view-permissions` shows who has what, cross-checked against live Drive state.
+Same vocabulary as everywhere in agent-index: *share with X* → X can read; *make X a collaborator* → X can read and write. `@ai:grant-permission {slug}` (owner-only — it's your folder; I'll show you the exact change and ask you to confirm, then the grant applies with your credentials and is verified). `@ai:revoke-permission` is the inverse. `@ai:view-permissions` shows who has what, cross-checked against live Drive state.
 
 **Topic 5: The universal visibility floor**
 

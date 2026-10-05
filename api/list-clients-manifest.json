@@ -3,7 +3,7 @@
   "type": "task",
   "display_name": "List Clients",
   "collection": "client-intelligence",
-  "collection_version": "2.3.0",
+  "collection_version": "2.4.0",
   "version": "2.1.0",
   "eol_date": null,
   "eol_warning_days": 60,
@@ -19,11 +19,11 @@
     "tasks": []
   },
   "external_dependencies": [
-    "Remote filesystem access (adapter contract 2.0.0 or higher)"
+    "Remote filesystem access (adapter 2.5.0+)"
   ],
   "optional_external_dependencies": [
     "brand-book capability (get-template/get-element/get-brand-guidelines) — branded interactive view + standalone exports; degrades to markdown table when absent"
   ],
-  "reads_from": "/shared/client-intelligence/",
+  "reads_from": "/shared/client-intelligence/public-index/",
   "writes_to": null
 }

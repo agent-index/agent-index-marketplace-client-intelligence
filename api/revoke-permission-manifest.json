@@ -3,8 +3,8 @@
   "type": "task",
   "display_name": "Revoke Permission",
   "collection": "client-intelligence",
-  "collection_version": "2.3.0",
-  "version": "2.0.0",
+  "collection_version": "2.4.0",
+  "version": "2.1.0",
   "eol_date": null,
   "eol_warning_days": 60,
   "stateful": false,
@@ -15,16 +15,13 @@
   "missing_dependencies": [],
   "parameter_provenance": {},
   "dependencies": {
-    "skills": [
-      "permission-change-helper"
-    ],
+    "skills": [],
     "tasks": []
   },
   "external_dependencies": [
-    "Remote filesystem access (adapter contract 2.0.0 or higher)",
-    "Permission-change-helper binary (Go or Node) at mcp-servers/permission-helper-*"
+    "Remote filesystem access (adapter 2.5.0+)"
   ],
   "optional_external_dependencies": [],
-  "reads_from": "/shared/client-intelligence/",
-  "writes_to": null
+  "reads_from": "/shared/client-intelligence/public-index/, id:{member_folder_id}/clients/",
+  "writes_to": "/shared/client-intelligence/public-index/"
 }
