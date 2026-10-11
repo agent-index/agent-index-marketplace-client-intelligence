@@ -60,9 +60,10 @@ Resolve via `members-registry.json` — read it by id anchor (`aifs_read("id:{re
 `aifs_get_permissions({path: "/shared/client-intelligence/templates/", include_inherited: true})` and `aifs_get_permissions({path: "/shared/client-intelligence/config/", include_inherited: true})`. Keep two views:
 
 - **Unfiltered** — every permission on each folder, explicit and inherited, individual and group. Used to decide whether the target is an admin at all (Step 4a/4b).
-- **Filtered admin set** — from the `templates/` writers only, used **only** for the last-admin guardrail count (Step 4c). Filter out:
-  - Inherited writers from the parent drive root (members with drive-level Editor, like the org owner; they're admins through inheritance rather than explicit grant on templates/).
-  - Group subjects whose membership we can't enumerate locally (e.g., admins-group@...). For safety, count groups as "1 admin" each — removing an explicit individual is still safe if a group has admin coverage.
+- **Remaining admin set** — from the `templates/` writers, used **only** for the last-admin guardrail count (Step 4c). It counts everyone who will still be able to administer the collection after the removal:
+  - **Explicit individual writers**, other than the target.
+  - **Individuals with writer inherited from the drive root or another parent** (drive Managers and Content managers, such as the org owner). They keep admin capability however explicit grants change. These used to be excluded, and on a Shared Drive the bootstrap admin usually has *only* inherited access: the core permission-changes procedure skips their bootstrap grant as already in effect. The guardrail then saw the one added admin as "the only admin" and refused every removal (`ciadmincount`, 3.32.0 live test).
+  - **Groups** with writer, counted as 1 admin each, **except the all-members group** (org-config `remote_filesystem.connection.all_members_group`), which never makes anyone an admin.
 
 ### Step 4: Admin test and last-admin guardrail
 
@@ -70,7 +71,7 @@ Match the target's subject against the **unfiltered** permissions of **both** fo
 
 - **4a. Not an admin** — the target holds no writer-level permission on either folder (explicit or inherited, as far as we can detect): *"`{target.display_name}` isn't currently an admin on client-intelligence. Nothing to revoke."* Halt.
 - **4b. Inherited only** — the target holds writer-level access on one or both folders, but no explicit grant on either: *"`{target.display_name}`'s admin role comes from inheritance — typically a drive-level Editor grant from the org owner. To remove it, an org admin would need to adjust the parent grant; this collection-level task can't reach it."* Halt.
-- **4c. Last-admin guardrail** — the target holds an explicit grant on at least one folder (a stray explicit grant on `config/` alone counts). If removing the target would leave the **filtered admin set** empty, refuse: *"`{target.display_name}` is the only admin on client-intelligence. Removing them would leave the collection with no admins, which means no one could author templates, edit the default permission policy, or manage permissions. Add another admin first via `@ai:add-admin`, then re-run this task."* Halt.
+- **4c. Last-admin guardrail** — the target holds an explicit grant on at least one folder (a stray explicit grant on `config/` alone counts). If removing the target would leave the **remaining admin set** empty, refuse: *"`{target.display_name}` is the only admin on client-intelligence. Removing them would leave the collection with no admins, which means no one could author templates, edit the default permission policy, or manage permissions. Add another admin first via `@ai:add-admin`, then re-run this task."* Halt.
 
 Otherwise continue to Step 5.
 
@@ -156,4 +157,4 @@ Not stateful.
 
 ## V1 Note
 
-Same as `add-admin`: the inheritance limitation that affects per-instance tasks doesn't apply here. `templates/` and `config/` don't have a permissive parent grant; explicit shares on those folders narrow correctly.
+Same as `add-admin`: the inheritance limitation that affects per-instance tasks doesn't apply here, because `templates/` and `config/` have no permissive *member* parent grant (the all-members group only reads them). They do inherit writer for drive Managers on a Shared Drive. That's why those Managers count as remaining admins in Step 3 and are reported by Step 4b as inheritance-only when targeted.
