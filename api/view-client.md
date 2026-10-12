@@ -60,7 +60,7 @@ When Step 4 produced a template AND the surface is Cowork: compose the profile f
 | Template handle | Scope | This collection runs |
 |---|---|---|
 | `edit` | record | **edit-client** for this slug |
-| `manage-access` | record | **view-permissions** (who has access) → **grant-permission** / **revoke-permission** to change (owner-run, private tier) |
+| `manage-access` | record | **view-permissions** (`@ai:view-client-permissions`; who has access) → **grant-permission** / **revoke-permission** to change (owner-run, private tier) |
 | `brief` | record | **client-brief** for this slug |
 | `transition` | record | **transition-client** (private ⇄ org-public) |
 | `archive` | record, `confirm` | **delete-client** `mode: archive` (soft; floor record survives) |

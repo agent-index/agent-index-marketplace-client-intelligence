@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.4.1] — <RELEASE_DATE> — Fixes from the dev-1 live test (Dev Two)
+
+### Fixed
+- **`view-permissions` 2.0.2 no longer collides with core's (`civiewpermsclash`, finding 24).** Its alias is `@ai:view-client-permissions`, and its triggers name the client ("view client permissions", "who has access to client", "who can see client", "permissions on client"). Core 4.0.0 apply-updates removes the retired generic phrases from existing members' routing, and org-setup's upgrade flow replaces the old alias in their member-index.
+- **`remove-admin` counts inherited admins (`ciadmincount`, finding 19).** Drive Managers who hold Editor through inheritance count toward the last-admin guard; the all-members group never does. (Staged on dev-1 under 2.4.0.)
+
 ## [2.4.0] — 2026-10-02 — Client access through the core permission-changes procedure
 
 **MINOR — requires agent-index-core 3.32.0 (and agent-index-marketplace 2.22.0 for collection provisioning).** Part of retiring the permission-change-helper (design record: `/shared/projects/core-improvements/artifacts/retire-permission-helper-*.md`).

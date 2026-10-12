@@ -1,7 +1,7 @@
 ---
 name: view-permissions
 type: task
-version: 2.0.1
+version: 2.0.2
 collection: client-intelligence
 description: Show who can access a client and how. Org-public clients report uniform org access (by design — no per-instance ACL exists). Private clients report the pointer's declared scope cross-checked against live Drive permissions (aifs_get_permissions on the owner's folder — readable by the owner and grantees), flagging any drift between the two.
 stateful: false
