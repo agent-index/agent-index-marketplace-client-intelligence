@@ -1,5 +1,45 @@
 # Changelog
 
+## [2.4.1] — 2026-10-13 — Fixes from the dev-1 live test (Dev Two)
+
+### Fixed
+- **`view-permissions` 2.0.2 no longer collides with core's (`civiewpermsclash`, finding 24).** Its alias is `@ai:view-client-permissions`, and its triggers name the client ("view client permissions", "who has access to client", "who can see client", "permissions on client"). Core 4.0.0 apply-updates removes the retired generic phrases from existing members' routing, and org-setup's upgrade flow replaces the old alias in their member-index.
+- **`remove-admin` counts inherited admins (`ciadmincount`, finding 19).** Drive Managers who hold Editor through inheritance count toward the last-admin guard; the all-members group never does. (Staged on dev-1 under 2.4.0.)
+
+### License
+- Proprietary, as before: `LICENSE` added and the `collection.json` `license` field set to `proprietary` (it said `open`).
+
+## [2.4.0] — 2026-10-02 — Client access through the core permission-changes procedure
+
+**MINOR — requires agent-index-core 3.32.0 (and agent-index-marketplace 2.22.0 for collection provisioning).** Part of retiring the permission-change-helper (design record: `/shared/projects/core-improvements/artifacts/retire-permission-helper-*.md`).
+
+### Changed
+- **`create-client` 2.4.0, `grant-permission` 2.4.0, `revoke-permission` 2.1.0, `transition-client` 2.1.0** — every grant and removal goes through core `internal/permission-changes.md`. The owner sees the exact table and confirms it (removals one at a time), and each change is verified. Pointer scope lists only satisfied grants. After a revoke, scope is recomputed from a fresh `aifs_get_permissions` read.
+- **Recipients outside the org are allowed** (by email; flagged **outside your org**) for per-client sharing. Admin role (`add-admin`) is still limited to org members.
+- **`add-admin` 2.1.0, `remove-admin` 2.1.0** — the two-folder admin grant/removal goes through the procedure in `all_or_nothing` mode. Declining either row applies neither (core 3.32.0). remove-admin's separate yes/no step is folded into the procedure's per-removal confirmation. The last-admin guardrail is unchanged.
+- **`remove-admin` last-admin guardrail counts inherited admins (`ciadmincount`, found in the 3.32.0 live test).** Drive Managers who hold writer on `templates/` through inheritance now count as remaining admins. Removing an added admin is no longer refused because the bootstrap admin's grant was skipped as already in effect. The all-members group never counts.
+- **Collection setup § 8–9** — bootstrap ACLs go through the procedure as one admin-confirmed table. The repair path re-runs it (it skips what's in place).
+- **Task setups 1.1.0: `add-admin-setup`, `remove-admin-setup`, `create-client-setup`, `grant-permission-setup`, `revoke-permission-setup`** — helper-binary pre-checks removed; stale migration notes replaced with a 1.1.0 note.
+- **`add-admin` / `remove-admin` use `confirmer: "collection_admin"`** — client-intelligence admins (Editor on `templates/` and `config/`) need not be org admins; the backend enforces the role. Outputs name the `sharing_identity`.
+- **`add-admin`** — "already an admin" is decided by `nothing_to_change` before the `complete` branch; any other failure relays the procedure's summary and reports nothing applied.
+- **`remove-admin`** — self-removal is a notice (the per-row confirmations are the only confirmation); a departed member outside the registry can be picked from the current writers (`source: "current_state"`); the admin test reads the unfiltered permissions of both folders (the filtered set is only the last-admin count), so inherited-only and stray `config/` grants are handled; "no longer an admin" is printed only after a fresh re-read shows no Editor remains; a non-access-denied failure recommends re-running to finish (the revert is the alternative).
+- **`grant-permission`** — no early exit on "already granted per pointer scope": the procedure decides (`skipped_noop`) and the pointer is still reconciled from a fresh `aifs_get_permissions` read (and `item_drive_id` backfilled). Outside-org recipients are told to use "Shared with me".
+- **`revoke-permission`** — an inherited-only target is told the access is inherited and can't be removed here (not "doesn't have access"); pointer reconciliation after a failed removal is a separate fresh-read overwrite on the owner's request.
+- **`create-client`, `grant-permission`, `revoke-permission`, `transition-client`** — every change carries a `reason`.
+- **`transition-client`** — private → org-public cleanup captures the old `folder_id` in Step 1, reads its grants fresh, asks which to remove before the table, and sends one `unshare` per subject (`source: "current_state"`); org-public → private writes `item_drive_id` into the new pointer (C.1.3 crossdriveread).
+- **Collection setup 1.1.0** — sources declared per row (`org_config` for the all-members group, `member_request` for bootstrap admins); `bootstrap_admins` is written to `collection-state.json` only after § 8 completes; `version` fields templated from `collection.json`; org-config and the members registry read by id anchor; a 1.x `collection-state.json` halts and routes to `upgrade/1-to-2.md`.
+- **`client-intelligence-tutorial` 2.0.1, `view-permissions` 2.0.1** — wording: confirm the exact change in conversation (no review page); pointer repaired "after verified changes".
+- **README** refreshed for the 2.x tier model; requires core 3.32.0+.
+
+### Fixed
+- **`collaborative-acls.json` used `grants[]` / `purpose`, which install-collection ignored**, so its declared grants were never provisioned by Step 5.5 (the setup's own § 8 masked it). It now uses `acls[]` / `rationale` and declares `"requires_upgrade_review": ["1-to-2"]`, which install-collection reads to ask whether the 1-to-2 admin-half review is done before applying these grants on an upgrade from 1.x. install-collection 2.4.0 also accepts the old key.
+- **Manifest drift** — `external_dependencies`, `reads_from` / `writes_to` synced to frontmatter for create-client, grant-permission, revoke-permission, view-client, list-clients, edit-client, delete-client, view-permissions, edit-default-permissions; the spurious `view-client` task dependency is dropped from edit-client and delete-client manifests (neither workflow invokes it).
+
+### Removed
+- Dependency on the `permission-change-helper` skill and binary (frontmatter, manifests, `collection.json` external dependency).
+- **1.x → 2.x upgrade no longer loops:** `upgrade/1-to-2.md` step 4a records `"1-to-2"` in org-config `upgrade_reviews_confirmed` once the gated-instance review is done. The setup's 1.x gate halts only while that marker is missing.
+- **add-admin / remove-admin:** access-denied messages and the V1 note say plainly that changing sharing on these Shared-Drive folders needs drive-Manager rights (F12).
+
 ## [2.3.0] — 2026-06-28 — Release C.1.3: crossdriveread
 
 ### Fixed
@@ -92,7 +132,7 @@ users. 2.0 replaces it with the two access models proven in the bug-reports and 
 
 ---
 
-## [1.1.1] — <RELEASE_DATE> — companion to core 3.7.4
+## [1.1.1] — 2026-10-13 — companion to core 3.7.4
 
 ### Documentation
 

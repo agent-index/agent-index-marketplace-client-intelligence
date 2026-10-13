@@ -1,7 +1,7 @@
 ---
 name: view-permissions
 type: task
-version: 2.0.0
+version: 2.0.2
 collection: client-intelligence
 description: Show who can access a client and how. Org-public clients report uniform org access (by design — no per-instance ACL exists). Private clients report the pointer's declared scope cross-checked against live Drive permissions (aifs_get_permissions on the owner's folder — readable by the owner and grantees), flagging any drift between the two.
 stateful: false
@@ -24,7 +24,7 @@ View Permissions answers "who can see/edit this client?" per tier:
 - **Private:** two sources, cross-checked:
   1. The pointer's declared `scope` (readers / collaborators) — what agent-index believes.
   2. Live `aifs_get_permissions("id:{location.folder_id}")` — what Drive enforces. Works for the owner and grantees; a caller with no access gets the floor view instead ("private to {owner}").
-  Any mismatch (a grant Drive has that the pointer doesn't, or vice versa) is rendered as **drift** with a reconciliation suggestion (owner re-runs grant/revoke-permission, which repairs the pointer through the hard gate).
+  Any mismatch (a grant Drive has that the pointer doesn't, or vice versa) is rendered as **drift** with a reconciliation suggestion (owner re-runs grant/revoke-permission, which repairs the pointer after verified changes).
 
 Permission HISTORY remains out of scope (post-V1, `aifs_get_audit`); current state only. Grant changes are owner-run (`grant-permission` / `revoke-permission`) — this task never modifies anything.
 

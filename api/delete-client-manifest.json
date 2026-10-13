@@ -3,7 +3,7 @@
   "type": "task",
   "display_name": "Delete Client",
   "collection": "client-intelligence",
-  "collection_version": "2.3.0",
+  "collection_version": "2.4.1",
   "version": "2.0.0",
   "eol_date": null,
   "eol_warning_days": 60,
@@ -16,14 +16,12 @@
   "parameter_provenance": {},
   "dependencies": {
     "skills": [],
-    "tasks": [
-      "view-client"
-    ]
+    "tasks": []
   },
   "external_dependencies": [
-    "Remote filesystem access (adapter contract 2.0.0 or higher)"
+    "Remote filesystem access (adapter 2.5.0+)"
   ],
   "optional_external_dependencies": [],
-  "reads_from": "/shared/client-intelligence/",
-  "writes_to": "/shared/client-intelligence/"
+  "reads_from": "/shared/client-intelligence/, id:{folder_id}/",
+  "writes_to": "/shared/client-intelligence/, id:{folder_id}/"
 }

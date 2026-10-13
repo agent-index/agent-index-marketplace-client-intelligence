@@ -1,21 +1,19 @@
 ---
 name: create-client
 type: task
-version: 2.3.0
+version: 2.4.0
 collection: client-intelligence
-description: Member-facing task to create a new client instance from a template. Interviews the member for template-defined field values, optional extension fields, and a client name, then asks the visibility question — private (default; stored in the member's own My Drive, shareable per-person later) or org-public (stored in the org commons under /shared, uniformly accessible to all members). Writes the instance, the universal-floor pointer, and the initial changelog. Private-tier per-creation grants go through permission-change-helper with the owner's Accept.
+description: Member-facing task to create a new client instance from a template. Interviews the member for template-defined field values, optional extension fields, and a client name, then asks the visibility question — private (default; stored in the member's own My Drive, shareable per-person later) or org-public (stored in the org commons under /shared, uniformly accessible to all members). Writes the instance, the universal-floor pointer, and the initial changelog. Private-tier per-creation grants go through the core permission-changes procedure with the owner confirming the exact changes.
 stateful: false
 produces_artifacts: false
 produces_shared_artifacts: true
 dependencies:
-  skills:
-    - permission-change-helper
+  skills: []
   tasks:
     - list-templates
     - view-template
 external_dependencies:
   - Remote filesystem access (adapter 2.5.0+ — ID-anchor addressing)
-  - permission-change-helper binary 0.4.1+ (private-tier grants only)
 reads_from: "/shared/client-intelligence/, id:{member_folder_id}/clients/"
 writes_to: "id:{member_folder_id}/clients/, /shared/client-intelligence/"
 ---
@@ -44,7 +42,7 @@ There is NO creator-applied ACL step in this task (removed in 2.0.0): the 1.x de
 
 Private tier:
 - `id:{member_folder_id}/clients/{slug}/instance.json`, `changelog.json`
-- Optional grants on `id:{client_folder_id}` via permission-change-helper (owner Accepts)
+- Optional grants on `id:{client_folder_id}` through the core permission-changes procedure (owner confirms; verified)
 
 Org-public tier:
 - `/shared/client-intelligence/instances/{slug}/instance.json`, `changelog.json`
@@ -95,13 +93,13 @@ Per the org default (`private_first` unless configured otherwise), ask:
 
 Include the custody guidance once per session: *"Rule of thumb: revenue-bearing org relationships belong org-public (the org keeps them if you leave); prospecting and sensitive engagements start private."*
 
-If `private`: optionally collect `per_creation_grants` — *"Anyone you want to give access right away? (read, or collaborate = read+write). Otherwise it's just you, and you can grant later with `@ai:grant-permission`."* Resolve each target against `members-registry.json`; drop unresolvable targets with a notice.
+If `private`: optionally collect `per_creation_grants` — *"Anyone you want to give access right away? (read, or collaborate = read+write). Otherwise it's just you, and you can grant later with `@ai:grant-permission`."* Resolve each target against `members-registry.json` → their `sharing_identity`. A name that doesn't resolve → ask for their email address (never guess). An address outside the registry is allowed: the permission-changes table marks it **outside your org**, and it's the owner's call. Tell them the person opens it from their storage app's "Shared with me".
 
 If `org_public`: no grants question (uniform access).
 
 ### Step 9: Summary and confirm
 
-Show name/slug/template/fields/extension fields/tier (+ planned grants if any). Proceed only on explicit confirm. **No filesystem writes before this point.**
+Show name/slug/template/fields/extension fields/tier (+ planned grants if any; the grants themselves get their own exact table and confirmation in Step 12). Proceed only on explicit confirm. **No filesystem writes before this point.**
 
 ### Step 10: Structural writes
 
@@ -140,9 +138,16 @@ For a private client with per-creation grants, `scope` becomes `{"readers": [...
 
 ### Step 12: Per-creation grants (private tier with grants only)
 
-Compose ONE permission-change-helper spec: an `op: "share"` per grant on resource **`id:{client_folder_id}`** (bare folder ID — helper 0.4.1+; the exact folder, least privilege): read → `reader`, collaborate → `writer`. The member (owner) reviews and **Accepts** — the folder is theirs, so the grants apply under their own credentials. Never call `aifs_share` directly.
+Follow `/agent-index-core/internal/permission-changes.md`:
+- `calling_task: "create-client"`, `confirmer: "owner"`
+- one `share` per grant on resource **`id:{client_folder_id}`** (bare folder ID; the exact folder, least privilege), `resource_label` "Client '{name}'", `is_folder: true`, read → `reader`, collaborate → `writer`, `reason` "You asked to share new client '{name}' with {recipient} ({read|read and write})", `source: "member_request"`
 
-**HARD GATE (strategy 1.1.3 precedent):** proceed only when the outcome file reports `"outcome": "applied"`, OR — if the file is missing/page-lifecycle-valued despite a confirmed Accept — an independent `aifs_get_permissions("id:{client_folder_id}")` confirms every requested grant. On `applied`: overwrite the pointer with the granted `scope`. On `rejected`/failure: the client stays private with no grants — *"Client created (private, just you). Grants weren't applied; add them anytime with `@ai:grant-permission`."* Never write a scope the Drive state doesn't back.
+The owner sees the exact table and confirms it. The folder is theirs, so the grants apply under their own credentials, and each is verified.
+
+**Gate (strategy precedent):**
+- Overwrite the pointer's `scope` with `{"readers": [...], "collaborators": [...]}` listing only rows `applied` or `skipped_noop`.
+- If none is satisfied, the client stays private with no grants: *"Client created (private, just you). Grants weren't applied; add them anytime with `@ai:grant-permission`."*
+- Never write a scope the Drive state doesn't back.
 
 ### Step 13: Confirm to caller
 
@@ -161,9 +166,9 @@ Conversational; adapt depth to the member. The visibility question is the one de
 
 ### Constraints
 
-- **Never call `aifs_share`/`aifs_unshare`/`aifs_transfer_ownership` directly.** Private-tier grants only via permission-change-helper with the owner's Accept.
+- **Never call `aifs_share`/`aifs_unshare`/`aifs_transfer_ownership` outside the core permission-changes procedure.** Private-tier grants are confirmed by the owner.
 - **Never apply or attempt per-instance ACLs in the org tier** — uniform access by design; Drive forbids member-applied /shared folder grants anyway (F12).
-- **Never write the pointer's granted scope before the Step 12 hard gate passes.**
+- **Never write the pointer's granted scope for a grant that isn't `applied` or `skipped_noop`** (Step 12 gate).
 - **Never block on duplicate names**; never reuse a slug; never write before Step 9's confirm.
 - Org-tier writes that fail permission checks indicate broken provisioning — halt and name the admin fix; do not retry as a different identity.
 
@@ -171,7 +176,7 @@ Conversational; adapt depth to the member. The visibility question is the one de
 
 - Template edited mid-interview: instance binds to the version read at Step 3 (as 1.x).
 - `member_folder_id` missing → Step 1 halt with self-provisioning guidance.
-- Unresolvable grant target → dropped with notice, never included in the spec.
-- Helper `partial_failure` → pointer gets ONLY the verified grants; offer retry via `@ai:grant-permission`.
+- Unresolvable name with no email given → ask; never guess an address.
+- Some grants not applied → pointer gets ONLY the satisfied grants; offer retry via `@ai:grant-permission`.
 - Org-public chosen but org default is `private_first` — fine; the default shapes the prompt, not the choice.
 - Floor pointer write fails after instance writes: surface — the client exists but is undiscoverable; re-run guidance (slug check makes re-runs safe).

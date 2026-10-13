@@ -1,7 +1,7 @@
 ---
 name: view-permissions-setup
 type: setup
-version: 1.0.0
+version: 1.1.0
 collection: client-intelligence
 description: Setup for the view-permissions task — no member-specific parameters. Validates that the collection is installed.
 target: view-permissions
@@ -32,8 +32,8 @@ No member-defined parameters.
 
 1. Validate remote filesystem access.
 2. Confirm `/shared/client-intelligence/collection-state.json` exists.
-3. Register entry in `member-index.json` with alias `@ai:view-permissions`.
-4. Confirm to member: *"View Permissions is ready. Say `@ai:view-permissions {slug}` to see who has access to a specific client."*
+3. Register entry in `member-index.json` with alias `@ai:view-client-permissions`. Core has its own `view-permissions` task (`@ai:view-permissions`, any file or folder), so this collection's alias names the client (`civiewpermsclash`, Dev Two live test finding 24).
+4. Confirm to member: *"View Permissions is ready. Say `@ai:view-client-permissions {slug}` (or "who has access to client {name}") to see who has access to a specific client."*
 
 ---
 

@@ -1,27 +1,28 @@
 ---
 name: client-intelligence-collection-setup
 type: collection-setup
-version: 1.0.0
+version: 1.1.0
 collection: client-intelligence
-description: Org-admin setup for the client-intelligence collection — collects bootstrap admins, default permission policy preset, and example-template choice; then bootstraps /shared/client-intelligence/ on the remote filesystem with the folder tree, initial ACLs, seeded config, and (optionally) an example template.
+description: Org-admin setup for the client-intelligence collection — collects bootstrap admins, the default client-visibility prompt, and example-template choice; then bootstraps /shared/client-intelligence/ on the remote filesystem with the folder tree, initial ACLs, seeded config, and (optionally) an example template.
 upgrade_compatible: true
 ---
 
 ## Collection Setup Overview
 
-This setup runs once when an org admin installs the client-intelligence collection. It collects three choices from the admin, then executes the install bootstrap: creates the folder tree under `/shared/client-intelligence/`, applies initial ACLs, seeds the default permission policy and the empty template changelog, and (optionally) ships the example client template.
+This setup runs once when an org admin installs the client-intelligence collection. It collects three choices from the admin, then executes the install bootstrap: creates the folder tree under `/shared/client-intelligence/`, seeds `collection-state.json` and the empty template changelog, (optionally) ships the example client template, and applies the folder grants through the core permission-changes procedure (the admin confirms the exact changes).
 
-After this setup completes, the collection is ready for day-to-day use: admins author templates, members create clients from templates, and per-instance permissions are managed via Drive ACLs through the access-control adapter contract.
+After this setup completes, the collection is ready for day-to-day use: admins author templates, members create clients from templates, and each client lives in one of two tiers — private (in the owner's own My Drive, shared per-person by the owner through the core permission-changes procedure) or org-public (in the commons under uniform member access). There are no per-instance ACLs in 2.x.
 
 ---
 
 ## Prerequisites
 
 - Remote filesystem access via `aifs_*` tools (test with `aifs_auth_status()`).
-- The filesystem adapter must declare `contract_version: "2.0.0"` or higher (required for `aifs_share`, `aifs_unshare`, `aifs_get_permissions`, and revision-aware `aifs_write`). Verify before proceeding by reading the local adapter manifest at `mcp-servers/filesystem/adapter.json` and checking the `contract_version` field.
-- An all-members Google Group defined at the org level. Read `org-config.json` and confirm `remote_filesystem.connection.all_members_group` is non-empty. If absent, halt and instruct the admin to set it via `@ai:edit-org` first.
-- The installing member is an org admin. Read `org-config.json` and confirm the installing member's `member_hash` is present in the `admins[]` array. If not, halt and instruct.
-- `/shared/client-intelligence/collection-state.json` does not exist (the collection is not already installed). If it exists, halt with an "already installed" message and offer the repair path described in Upgrade Behavior below.
+- agent-index-core 3.32.0+ (the core permission-changes procedure applies every grant in step 8).
+- The filesystem adapter must declare `contract_version: "2.0.0"` or higher (required by the permission-changes procedure, `aifs_get_permissions`, and revision-aware `aifs_write`). Verify before proceeding by reading the local adapter manifest at `mcp-servers/filesystem/adapter.json` and checking the `contract_version` field.
+- An all-members Google Group defined at the org level. Read `org-config.json` **by id anchor** (`aifs_read("id:{org_config_id}")`, id from local `agent-index.json` → `remote_filesystem.connection`; root-level paths don't resolve for non-Drive-members) and confirm `remote_filesystem.connection.all_members_group` is non-empty. If absent, halt and instruct the admin to set it via `@ai:edit-org` first.
+- The installing member is an org admin. In the same org-config, confirm the installing member's `member_hash` is present in the `admins[]` array. If not, halt and instruct.
+- `/shared/client-intelligence/collection-state.json` does not exist (the collection is not already installed). If it exists, halt with an "already installed" message and offer the Repair Path below — unless its `version` is below `2.0.0` (a 1.x org) and the review isn't recorded yet, in which case route to `upgrade/1-to-2.md` instead (see Repair Path; the review is recorded once `upgrade_reviews_confirmed` includes `"1-to-2"`).
 
 ---
 
@@ -33,7 +34,7 @@ List of members who will receive admin role on the collection at install time. A
 
 - Default: `[installing_member]` (the member running this setup)
 - Ask: "Who should be admins of the client-intelligence collection? The default is just you. You can add more org members — they will be granted admin role at install. Admins can author templates, edit the default permission policy, and add/remove other admins after install."
-- Read `members-registry.json` via `aifs_read("/members-registry.json")` and present available members. Let the admin select one or more.
+- Read `members-registry.json` by id anchor (`aifs_read("id:{resource_ids.members_registry}")`, id from org-config) and present available members. Let the admin select one or more.
 - Store as an array of `member_hash` strings.
 
 ### `clients_default_visibility` [org-mandated] (replaces 1.x `default_permission_policy_preset`)
@@ -65,9 +66,8 @@ After the admin answers all three parameters, present a confirmation summary and
 
 - `aifs_auth_status()` — confirm authenticated. If not, halt.
 - Read `mcp-servers/filesystem/adapter.json` locally and confirm the `contract_version` field is `"2.0.0"` or higher. If lower, halt and instruct the admin to update the filesystem adapter via `@ai:edit-org`.
-- `aifs_read("/org-config.json")` — capture `remote_filesystem.connection.all_members_group`.
-- `aifs_read("/org-config.json")` and confirm the installing member's `member_hash` appears in the `admins[]` array. If not, halt and instruct the admin to grant org admin role first.
-- `aifs_exists("/shared/client-intelligence/collection-state.json")` — if true, halt with the "already installed" message and branch to the repair path on admin confirmation.
+- `aifs_read("id:{org_config_id}")` (org-config by id anchor) — capture `remote_filesystem.connection.all_members_group` and `resource_ids.members_registry`, and confirm the installing member's `member_hash` appears in the `admins[]` array. If not, halt and instruct the admin to grant org admin role first.
+- `aifs_exists("/shared/client-intelligence/collection-state.json")` — if true, read it. `version` below `2.0.0`, and NOT recorded in org-config `installed_collections[client-intelligence].upgrade_reviews_confirmed` already includes `"1-to-2"` (the admin finished the review) → halt and route to `upgrade/1-to-2.md` (Repair Path, first rule). Otherwise halt with the "already installed" message and branch to the repair path on admin confirmation.
 
 ### 2. (Removed in 2.0.0)
 
@@ -79,14 +79,18 @@ Write `/shared/client-intelligence/collection-state.json` via `aifs_write`:
 
 ```json
 {
-  "version": "2.0.0",
+  "version": "{collection_version}",
   "installed": "{ISO_TIMESTAMP}",
   "installed_by": "{installing_member_hash}",
-  "bootstrap_admins": ["{member_hash_1}", "{member_hash_2}", ...],
+  "bootstrap_admins_requested": ["{member_hash_1}", "{member_hash_2}", ...],
   "example_template_installed": {true | false},
   "clients_default_visibility": "{private_first | ask | org_public_first}"
 }
 ```
+
+`{collection_version}` is the `version` from this collection's `collection.json` being installed — never a hard-coded value.
+
+**`bootstrap_admins` is not written here.** No admin grant exists yet, so this step records only who was *requested* (`bootstrap_admins_requested`). Step 9 adds `bootstrap_admins` once step 8 returns `complete` (no access record before the permission-changes procedure returns).
 
 This file is the canonical record that the collection is installed. Its existence is what later setup invocations check to detect "already installed."
 
@@ -145,90 +149,35 @@ Drive folders without files are ephemeral. To keep `public-index/instances/` and
 - `aifs_write("/shared/client-intelligence/public-index/instances/.gitkeep", "")`
 - `aifs_write("/shared/client-intelligence/instances/.gitkeep", "")`
 
-### 8. Apply ACLs via permission-change-helper
+### 8. Apply ACLs (core permission-changes procedure)
 
-Do **not** call `aifs_share` directly from this step. Per `agent-index-core/standards.md` ("Permission-Modifying Operations"), agents are categorically prohibited from making security-changing calls on the user's behalf, even at install time. Preflight v1.2+ flags any direct call to `aifs_share` / `aifs_unshare` / `aifs_transfer_ownership` in a task workflow as an authoring error.
+Never call `aifs_share` directly. Per `agent-index-core/standards.md` § "Permission changes: list, confirm, apply, verify", every permission change goes through the core procedure, install time included: the installer sees the exact changes, confirms them, and each is applied under the installer's own credentials and verified.
 
-Route the ACL grants through the `permission-change-helper` skill, which surfaces a review page in the installer's browser and applies the changes with the installer's own OAuth token after explicit Accept. The canonical exemplar for this pattern is `agent-index-core/api/invite-member.md` Step 6.
+Follow `/agent-index-core/internal/permission-changes.md` with one table:
+- `calling_task: "client-intelligence/install"`, `confirmer: "admin"`
+- `purpose`: "Set up client-intelligence access: bootstrap admins edit templates/ and config/; all members read the collection and write public-index/ and instances/"
+- `confirmer: "admin"` is correct here: the installer is an org admin (Prerequisites).
+- changes (all `share`, `is_folder: true`):
 
-**Build the spec:**
+  | Resource | Recipient | Role | Reason | Source |
+  |---|---|---|---|---|
+  | `/shared/client-intelligence/` | `{all_members_group}` | `reader` | Members read the collection | `org_config` |
+  | `/shared/client-intelligence/public-index/` | `{all_members_group}` | `writer` | Members register clients in the discovery index | `org_config` |
+  | `/shared/client-intelligence/templates/` | each bootstrap admin's `sharing_identity` | `writer` | Admin role (templates) | `member_request` |
+  | `/shared/client-intelligence/config/` | each bootstrap admin's `sharing_identity` | `writer` | Admin role (default policy) | `member_request` |
+  | `/shared/client-intelligence/instances/` | `{all_members_group}` | `writer` | Members create org-public clients | `org_config` |
 
-1. **Capture pre-state** for each of the five resources whose ACLs will change. `aifs_get_permissions` is agent-callable directly:
-   - `aifs_get_permissions("/shared/client-intelligence/")`
-   - `aifs_get_permissions("/shared/client-intelligence/public-index/")`
-   - `aifs_get_permissions("/shared/client-intelligence/templates/")`
-   - `aifs_get_permissions("/shared/client-intelligence/config/")`
-   - `aifs_get_permissions("/shared/client-intelligence/instances/")`
+  The all-members group comes from org-config (`org_config`); the bootstrap admins are the people the installer named in the `bootstrap_admins` answer this session (`member_request`), resolved to `sharing_identity` via the members registry.
 
-2. **Build the operations list.** The full set of intended grants is:
+The procedure skips anything already in effect. On a clean repair run it reports "No permission changes needed".
 
-   | Resource | Recipient | Role |
-   |---|---|---|
-   | `/shared/client-intelligence/` | `all_members_group` | `reader` |
-   | `/shared/client-intelligence/public-index/` | `all_members_group` | `writer` |
-   | `/shared/client-intelligence/templates/` | each `bootstrap_admin` | `writer` |
-   | `/shared/client-intelligence/config/` | each `bootstrap_admin` | `writer` |
-   | `/shared/client-intelligence/instances/` | `all_members_group` | `writer` |
-
-   For each (resource, recipient, role) tuple, look up the recipient in the corresponding pre-state. **Omit** operations where the recipient already has the requested role on the path (no-op filter). For each non-no-op tuple, build:
-
-   ```json
-   {
-     "op": "share",
-     "resource": "<path>",
-     "recipient": "<email_or_group>",
-     "role": "<reader|writer>",
-     "before": {"recipients": <pre-state.permissions>}
-   }
-   ```
-
-3. **Compose the full spec:**
-
-   ```json
-   {
-     "version": "1.0",
-     "operations": [...],
-     "context": {
-       "requestor": "{installer_member_hash}",
-       "calling_task": "client-intelligence/install",
-       "purpose": "Bootstrap ACLs for the client-intelligence collection: {N_admins} bootstrap admin(s) get Editor on templates/ and config/; the all-members group gets Reader on the root and Writer on public-index/ and instances/ so members can register and create client instances."
-     }
-   }
-   ```
-
-4. **If the filtered operations list is empty** (entire ACL state already in place — happens on a clean repair run): skip Step 8 entirely. Surface "All required ACLs are already in place; no permission changes needed."
-
-**Invoke the helper:**
-
-Narrate to the installer before invoking:
-
-> *"Here's a link to open a review page in your browser. It'll show {N} share operations covering the collection root, public-index, templates, config, and instances folders. Click the link, then click Accept on the review page to apply them with your own credentials."*
-
-Call the `permission-change-helper` skill with the spec.
-
-**Branch on outcome:**
-
-- **`applied`** — All requested shares succeeded. Continue to Step 9 (Verify).
-- **`rejected`** — Installer declined. Surface: "Install paused — no permissions modified. Files are in place (steps 3–7 completed) but the collection is not yet usable. Re-run the install in repair mode to resume." Halt.
-- **`timed_out`** / **`page_closed`** — Surface: "Review window closed without a decision. Re-run the install in repair mode to resume." Halt.
-- **`partial_failure`** — Surface a per-failure summary with the helper's `error_detail`. Offer to retry the failed ops only or to halt. Default: halt and recommend repair.
-- **`apply_error`** / **`verification_failed`** — Hard failure. Surface the error verbatim. Halt. Recommend repair after the underlying issue is resolved.
-- **`binary_not_found`** — Surface: "The permission helper isn't installed. Run `@ai:update` or `@ai:member-bootstrap` to complete the core install, then re-run client-intelligence install in repair mode."
-
-The ordering of grants (parent before children, tighter child overriding broader parent) is handled inside the helper's apply-script per Drive's ACL semantics; the spec declares the desired end-state only.
+**Act on the result:**
+- **`complete`** → Step 9.
+- **Anything else** (declined, cancelled, failed, not verified): surface "Install paused — {the procedure's summary lines}. Files are in place (steps 3–7 completed) but the collection is not yet usable. Re-run the install in repair mode to resume." Halt. A re-run skips whatever was already applied.
 
 ### 9. Verify
 
-The helper's apply-script already verifies post-share state per operation, but for an install we also do task-side post-verification:
-
-- `aifs_read("/shared/client-intelligence/collection-state.json")` — confirm the write succeeded.
-- `aifs_get_permissions("/shared/client-intelligence/")` — confirm the all-members Reader grant is present.
-- `aifs_get_permissions("/shared/client-intelligence/public-index/")` — confirm the all-members Writer grant.
-- `aifs_get_permissions("/shared/client-intelligence/templates/")` — confirm each bootstrap admin is a Writer.
-- `aifs_get_permissions("/shared/client-intelligence/config/")` — confirm each bootstrap admin is a Writer.
-- `aifs_get_permissions("/shared/client-intelligence/instances/")` — confirm the all-members Writer grant.
-
-If any verification fails, surface which step failed and recommend running the repair path.
+The procedure has already verified every grant against the backend. Now record the admins: read `/shared/client-intelligence/collection-state.json`, set `bootstrap_admins` to the requested admins (every admin row is `applied` or `skipped_noop`, since step 8 returned `complete`), and write it back. If the read or write fails, surface it and recommend the repair path.
 
 ### 10. Write `collection-setup-responses.md`
 
@@ -237,7 +186,7 @@ Write a YAML record of the setup choices to `/setup/collection-setup-responses.m
 ```yaml
 ---
 collection: client-intelligence
-version: 2.0.0
+version: "{collection_version}"
 installed: "{ISO_TIMESTAMP}"
 installed_by: "{installer.display_name}"
 bootstrap_admins: [...]
@@ -250,17 +199,20 @@ install_example_template: true
 
 > *"Client Intelligence is set up. {N} bootstrap admin(s), default visibility prompt: {clients_default_visibility}, example template: {installed | skipped}. Clients are private-by-default in each member's own space, shareable per-person, or org-public in the commons — every client's name is org-discoverable (the visibility floor). Members can start with `@ai:create-client`; admins author templates with `@ai:create-template`."*
 
-**Note (2.0.0):** the same grant set in step 8 is also declared in the collection's `collaborative-acls.json`, so `install-collection` Step 5.5 can verify/re-apply it idempotently on upgrades (upgrade-collection Step 6.5 flags it).
+**Note:** `collaborative-acls.json` declares **3 of the 5** step-8 rows — the all-members-group grants on the root, `public-index/`, and `instances/` — so `install-collection` Step 5.5 can verify/re-apply them idempotently on upgrades (upgrade-collection Step 6.5 flags it; its `requires_upgrade_review: ["1-to-2"]` holds the `instances/` grant until the gated-instance review is confirmed). The two admin rows on `templates/` and `config/` are per-member, so they live only here and in `add-admin` / `remove-admin`.
 
 ---
 
 ## Repair Path
 
-If the prerequisites detected an existing `collection-state.json` and the admin chose to run repair instead of installing fresh:
+**1.x orgs take this path only after the review.** If the existing `collection-state.json` has a `version` below `2.0.0` (or none), unless org-config `installed_collections[client-intelligence].upgrade_reviews_confirmed` already includes `"1-to-2"` (the admin finished the review), halt: *"This org has client-intelligence 1.x installed. Upgrading to 2.x needs the gated-instance review first — follow `upgrade/1-to-2.md` (admin half), then run `@ai:install-collection client-intelligence`."* Do not run step 8: it would grant the all-members group Writer on `instances/` before the review, exposing 1.x instances that were gated per-instance.
+
+If the prerequisites detected an existing 2.x `collection-state.json` and the admin chose to run repair instead of installing fresh:
 
 - Each of steps 3–8 above is preceded by a check of the current state. Operations that already match the expected state are skipped:
   - `aifs_write` calls are preceded by `aifs_read`; if the existing content matches what would be written (modulo timestamps), the write is skipped.
-  - `aifs_share` calls are preceded by `aifs_get_permissions`; if the expected grant is already in place, the share call is skipped.
+  - Step 8 re-runs the permission-changes procedure, which reads current access and skips any grant already in place.
+  - Step 9 sets `bootstrap_admins` only after step 8 returns `complete`; until then the file carries only `bootstrap_admins_requested`.
 - The example template is re-installed only if its files are missing. The `_changelog.json` is not rewritten; if any seed entries are missing they are appended with current timestamps and a `repair_pass: true` flag in `details`.
 - Verification (step 9) runs unchanged. The final confirmation message indicates "repaired" rather than "installed."
 
@@ -272,10 +224,10 @@ The repair path is safe to re-run multiple times.
 
 ### Preserved Responses
 
-On collection upgrade (v1.x → v1.y), these are preserved unchanged:
+On a collection upgrade within 2.x, these are preserved unchanged:
 
-- `bootstrap_admins` — admin role is maintained by `templates/` and `config/` ACLs on the filesystem, not by this responses file. Changes to the admin set after install happen via `@ai:add-admin` / `@ai:remove-admin`.
-- `default_permission_policy_preset` — the resolved `default-permissions.json` is preserved; the preset name on file is historical metadata.
+- `bootstrap_admins` — admin role is maintained by `templates/` and `config/` grants on the filesystem, not by this responses file. Changes to the admin set after install happen via `@ai:add-admin` / `@ai:remove-admin`.
+- `clients_default_visibility` — preserved; editable via `@ai:edit-default-permissions`. (It replaced the 1.x `default_permission_policy_preset`, which is retired along with `config/default-permissions.json`; the 1.x → 2.0 mapping is in `upgrade/1-to-2.md`.)
 - `install_example_template` — historical after install; not consulted again.
 
 ### Reset on Upgrade
@@ -288,7 +240,7 @@ None at present.
 
 ### Migration Notes
 
-- v1.0.0 → future versions: migration notes will be added here as new versions are published. Any version that changes the default permission policy schema will require an admin to confirm the new policy shape before the upgrade applies; the previous policy value is preserved for reference in `collection-setup-responses.md`.
+- **1.1.0 (collection 2.4.0):** step 8 applies grants through the core permission-changes procedure (agent-index-core 3.32.0+; the installer confirms the exact table) instead of the retired browser review-page flow; change sources are declared per row (`org_config` for the all-members group, `member_request` for bootstrap admins). `collection-state.json` now records `bootstrap_admins_requested` at seed time and `bootstrap_admins` only after the grants are confirmed and verified; `version` fields are templated from `collection.json`. org-config and the members registry are read by id anchor. A 1.x `collection-state.json` halts the repair path and routes to `upgrade/1-to-2.md`. No action is needed for existing 2.x installs.
 
 ---
 
@@ -304,5 +256,6 @@ None at present.
 | Any seed write fails | Stop, report which step failed, leave partial state in place. Caller can re-run in repair mode to complete. |
 | Any ACL apply fails | Stop, report which folder and which grant failed. Note that the collection is in a partially-installed state and members may not be able to use it until the ACL is applied. Recommend re-run in repair mode. |
 | Bootstrap admin not findable in members-registry | Halt with the specific member identifier and ask the admin to verify it. |
+| Existing `collection-state.json` with `version` < 2.0.0 (1.x org) and `upgrade_reviews_confirmed` lacking `1-to-2` | Halt; route to `upgrade/1-to-2.md`. Never apply step 8 before the gated-instance review. Once the review is recorded, the repair path runs and rewrites `collection-state.json` `version`. |
 
 The setup never silently leaves an inconsistent state. Every failure surfaces a specific, actionable error.

@@ -3,8 +3,8 @@
   "type": "task",
   "display_name": "Transition Client",
   "collection": "client-intelligence",
-  "collection_version": "2.3.0",
-  "version": "2.0.0",
+  "collection_version": "2.4.1",
+  "version": "2.1.0",
   "eol_date": null,
   "eol_warning_days": 60,
   "stateful": false,
@@ -15,14 +15,11 @@
   "missing_dependencies": [],
   "parameter_provenance": {},
   "dependencies": {
-    "skills": [
-      "permission-change-helper"
-    ],
+    "skills": [],
     "tasks": []
   },
   "external_dependencies": [
-    "Remote filesystem access (adapter 2.5.0+)",
-    "permission-change-helper binary 0.4.1+ at mcp-servers/permission-helper-go/"
+    "Remote filesystem access (adapter 2.5.0+)"
   ],
   "optional_external_dependencies": [],
   "reads_from": "/shared/client-intelligence/, id:{member_folder_id}/clients/",
