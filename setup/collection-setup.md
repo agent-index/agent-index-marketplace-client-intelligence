@@ -151,7 +151,7 @@ Drive folders without files are ephemeral. To keep `public-index/instances/` and
 
 ### 8. Apply ACLs (core permission-changes procedure)
 
-Never call `aifs_share` directly. Per `agent-index-core/standards.md` § "Permission changes: list, confirm, apply, verify", every permission change goes through the core procedure, install time included: the installer sees the exact changes, confirms them, and each is applied under the installer's own credentials and verified.
+Never call `aifs_share` directly. Per `agent-index-core/runtime-reference.md` § "Permission changes: list, confirm, apply, verify", every permission change goes through the core procedure, install time included: the installer sees the exact changes, confirms them, and each is applied under the installer's own credentials and verified.
 
 Follow `/agent-index-core/internal/permission-changes.md` with one table:
 - `calling_task: "client-intelligence/install"`, `confirmer: "admin"`

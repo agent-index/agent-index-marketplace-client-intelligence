@@ -18,7 +18,7 @@ writes_to: "/shared/client-intelligence/, id:{folder_id}/"
 
 ## About This Task
 
-Delete Client retires a client record. The 2.0 semantics follow the soft-delete conventions (standards.md): **archival is the default and usually the only option**; the universal-floor pointer is NEVER deleted by this task — it carries `status: "archived"` as the historical record ("we once had this relationship") and keeps `list-clients` honest.
+Delete Client retires a client record. The 2.0 semantics follow the soft-delete conventions (`agent-index-core/runtime-reference.md` § "Addressing: Owned Content and Sharing"): **archival is the default and usually the only option**; the universal-floor pointer is NEVER deleted by this task — it carries `status: "archived"` as the historical record ("we once had this relationship") and keeps `list-clients` honest.
 
 What's actually possible, per tier and role:
 
