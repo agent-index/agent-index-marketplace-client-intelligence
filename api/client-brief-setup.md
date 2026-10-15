@@ -15,7 +15,7 @@ None — format is chosen per invocation; branding follows the org's brand-book 
 
 ## Setup Completion
 
-1. Write the installed instance (using native file tools — LOCAL workspace) to `members/{member_hash}/skills/client-brief/`
+1. Write the installed instance (using native file tools — LOCAL workspace) to `members/{member_hash}/installed/client-intelligence/task/client-brief/`
 2. Write `manifest.json`; register in `member-index.json` with alias `@ai:client-brief`.
 3. Confirm: "Client Brief is ready — say 'client brief for {name}'."
 
