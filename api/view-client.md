@@ -1,7 +1,7 @@
 ---
 name: view-client
 type: task
-version: 2.3.0
+version: 2.3.1
 collection: client-intelligence
 description: Member-facing read task that displays a client's full data and recent changelog. Tier-resolved via the universal-floor pointer — org-public clients read from the commons; private clients read from the owner's space by folder ID (succeeds only for the owner and grantees). Callers without access get the floor view (name, owner, tier) plus how to ask the owner. When a brand-book provider supplies the `client-profile` template, renders a branded, interactive Cowork profile (with Edit / Manage access / Generate brief / Change visibility / Archive) by default; otherwise renders the plain record. Can export the profile to a standalone HTML / PDF / Word artifact on request.
 stateful: false
@@ -46,7 +46,7 @@ Per the rules above. Read `instance.json` fully; read `changelog.json` and take 
 Inlined (members can't read `/internal/` at runtime — bug 20260608 int4; `/internal/resolve-brand.md` is authoring docs only):
 
 1. **Find the provider.** `aifs_read("/org-config.json")` → `capability_providers["brand-book"].providers`. Empty/absent/multiple → **no brand**: go to Step 5b (plain record) with a one-line notice.
-2. **Provider read base (id-anchored).** Provider collection in `installed_collections[]`; `base = "id:{folder_id}"` if present else `/{provider_collection}`. `brand_book_version` = the provider's registry `capability_version`.
+2. **Provider read base (id-anchored).** Provider collection in `installed_collections[]`; `base = "id:{folder_id}"` if present else `/{provider_collection}`; on OneDrive always `/{provider_collection}` (core `runtime-reference.md` § "Addressing: Owned Content and Sharing", finding 63). `brand_book_version` = the provider's registry `capability_version`.
 3. **Fetch once (read-only ops from `{base}/api/...`):** `get-template("client-profile", "html")` — `client-profile` is THIS collection's record artifact type; whatever brand template the org published under that name is used (`found:false`/failure → Step 5b). For **each element named in the returned template's `sections`** (no hardcoded element names): `get-element(name, "html")` (tokens resolve against `/shared/brand-book/tokens/*`); per-element `found:false`/`rendering_missing` → native default for that element.
 4. **Personal-element precedence** as elsewhere (optional → personal wins; required → org wins except where org-undefined).
 5. **Slot value.** `client-logo` for the header badge comes from the instance's `branding/` read at the client's tier; absent → initials badge.

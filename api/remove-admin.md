@@ -1,7 +1,7 @@
 ---
 name: remove-admin
 type: task
-version: 2.1.0
+version: 2.1.1
 collection: client-intelligence
 description: Admin-only task to revoke admin role from a member. Symmetric inverse of add-admin - unshares both /shared/client-intelligence/templates/ and /shared/client-intelligence/config/. Enforces a last-admin guardrail - the task refuses to leave the collection with zero admins. Removals go through the core permission-changes procedure (confirmer collection_admin; caller confirms each; all-or-nothing). Authority is backend-enforced - only existing collection admins can unshare these folders.
 stateful: false
@@ -49,7 +49,7 @@ Drive Activity records both unshare events. No collection-side files are modifie
 
 ### Step 2: Resolve target member
 
-Resolve via `members-registry.json` — read it by id anchor (`aifs_read("id:{resource_ids.members_registry}")`, id from org-config, itself read by id anchor `id:{org_config_id}`; root-level paths don't resolve for non-Drive-members) — to `member_hash + email + sharing_identity + display_name`. The target's subject for the rest of the task is `{target.sharing_identity}`, with `source: "member_request"`.
+Resolve via `members-registry.json` — read it by id anchor (`aifs_read("id:{resource_ids.members_registry}")`, id from org-config, itself read by id anchor `id:{org_config_id}`; on gdrive root-level paths don't resolve for non-Drive-members; OneDrive: read `/org-config.json` and `/members-registry.json` by path instead — a bare `id:` resolves against your own drive there, core `runtime-reference.md` § "Addressing: Owned Content and Sharing", finding 63) — to `member_hash + email + sharing_identity + display_name`. The target's subject for the rest of the task is `{target.sharing_identity}`, with `source: "member_request"`.
 
 - **Multiple matches** → ask the caller to disambiguate.
 - **No registry match** (e.g., a departed member who still holds Editor) → don't guess an address and don't halt yet. After the Step 3 read, list the writers on `templates/` and `config/` that aren't in the registry and ask the caller which one they mean. If they pick one, that subject (exactly as the backend reports it) is the target, with `source: "current_state"`, and its display name is the subject itself. If none matches, halt: *"I can't find `{input}` among the members or the current admins on client-intelligence. Nothing to revoke."*
