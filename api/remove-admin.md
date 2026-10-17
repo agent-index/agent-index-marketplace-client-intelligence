@@ -1,7 +1,7 @@
 ---
 name: remove-admin
 type: task
-version: 2.1.1
+version: 2.1.2
 collection: client-intelligence
 description: Admin-only task to revoke admin role from a member. Symmetric inverse of add-admin - unshares both /shared/client-intelligence/templates/ and /shared/client-intelligence/config/. Enforces a last-admin guardrail - the task refuses to leave the collection with zero admins. Removals go through the core permission-changes procedure (confirmer collection_admin; caller confirms each; all-or-nothing). Authority is backend-enforced - only existing collection admins can unshare these folders.
 stateful: false

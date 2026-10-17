@@ -1,7 +1,7 @@
 ---
 name: delete-client
 type: task
-version: 2.0.0
+version: 2.0.1
 collection: client-intelligence
 description: Archive (default) or remove a client. Soft semantics everywhere members can't delete — org-public archival marks status; the floor entry always survives as the historical record. True deletion exists only where someone actually holds delete power — owners in their own My Drive, admins in the commons. Includes unarchive.
 stateful: false

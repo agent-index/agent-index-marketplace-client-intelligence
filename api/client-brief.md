@@ -1,7 +1,7 @@
 ---
 name: client-brief
 type: task
-version: 1.0.2
+version: 1.0.3
 collection: client-intelligence
 description: Produce a shareable client brief document (markdown or docx) from a client instance — template fields, extensions, recent activity — brand-styled when the org has a brand-book provider registered.
 stateful: false

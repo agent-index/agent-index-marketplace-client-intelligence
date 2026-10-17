@@ -1,7 +1,7 @@
 ---
 name: create-client
 type: task
-version: 2.4.0
+version: 2.4.1
 collection: client-intelligence
 description: Member-facing task to create a new client instance from a template. Interviews the member for template-defined field values, optional extension fields, and a client name, then asks the visibility question — private (default; stored in the member's own My Drive, shareable per-person later) or org-public (stored in the org commons under /shared, uniformly accessible to all members). Writes the instance, the universal-floor pointer, and the initial changelog. Private-tier per-creation grants go through the core permission-changes procedure with the owner confirming the exact changes.
 stateful: false
