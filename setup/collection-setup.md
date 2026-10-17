@@ -20,7 +20,7 @@ After this setup completes, the collection is ready for day-to-day use: admins a
 - Remote filesystem access via `aifs_*` tools (test with `aifs_auth_status()`).
 - agent-index-core 3.32.0+ (the core permission-changes procedure applies every grant in step 8).
 - The filesystem adapter must declare `contract_version: "2.0.0"` or higher (required by the permission-changes procedure, `aifs_get_permissions`, and revision-aware `aifs_write`). Verify before proceeding by reading the local adapter manifest at `mcp-servers/filesystem/adapter.json` and checking the `contract_version` field.
-- An all-members Google Group defined at the org level. Read `org-config.json` **by id anchor** (`aifs_read("id:{org_config_id}")`, id from local `agent-index.json` → `remote_filesystem.connection`; on gdrive root-level paths don't resolve for non-Drive-members; OneDrive: read `/org-config.json` by path — a bare `id:` resolves against your own drive there, core standards § Addressing, finding 63) and confirm `remote_filesystem.connection.all_members_group` is non-empty. If absent, halt and instruct the admin to set it via `@ai:edit-org` first.
+- An all-members Google Group defined at the org level. Read `org-config.json` **by id anchor** (`aifs_read("id:{org_config_id}")`, id from local `agent-index.json` → `remote_filesystem.connection`; on gdrive root-level paths don't resolve for non-Drive-members; OneDrive: read `/org-config.json` by path — a bare `id:` resolves against your own drive there, core `runtime-reference.md` § "Addressing: Owned Content and Sharing", finding 63) and confirm `remote_filesystem.connection.all_members_group` is non-empty. If absent, halt and instruct the admin to set it via `@ai:edit-org` first.
 - The installing member is an org admin. In the same org-config, confirm the installing member's `member_hash` is present in the `admins[]` array. If not, halt and instruct.
 - `/shared/client-intelligence/collection-state.json` does not exist (the collection is not already installed). If it exists, halt with an "already installed" message and offer the Repair Path below — unless its `version` is below `2.0.0` (a 1.x org) and the review isn't recorded yet, in which case route to `upgrade/1-to-2.md` instead (see Repair Path; the review is recorded once `upgrade_reviews_confirmed` includes `"1-to-2"`).
 
@@ -34,7 +34,7 @@ List of members who will receive admin role on the collection at install time. A
 
 - Default: `[installing_member]` (the member running this setup)
 - Ask: "Who should be admins of the client-intelligence collection? The default is just you. You can add more org members — they will be granted admin role at install. Admins can author templates, edit the default permission policy, and add/remove other admins after install."
-- Read `members-registry.json` by id anchor (`aifs_read("id:{resource_ids.members_registry}")`, id from org-config; OneDrive: `/members-registry.json` by path — core standards § Addressing, finding 63) and present available members. Let the admin select one or more.
+- Read `members-registry.json` by id anchor (`aifs_read("id:{resource_ids.members_registry}")`, id from org-config; OneDrive: `/members-registry.json` by path — core `runtime-reference.md` § "Addressing: Owned Content and Sharing", finding 63) and present available members. Let the admin select one or more.
 - Store as an array of `member_hash` strings.
 
 ### `clients_default_visibility` [org-mandated] (replaces 1.x `default_permission_policy_preset`)
@@ -66,7 +66,7 @@ After the admin answers all three parameters, present a confirmation summary and
 
 - `aifs_auth_status()` — confirm authenticated. If not, halt.
 - Read `mcp-servers/filesystem/adapter.json` locally and confirm the `contract_version` field is `"2.0.0"` or higher. If lower, halt and instruct the admin to update the filesystem adapter via `@ai:edit-org`.
-- `aifs_read("id:{org_config_id}")` (org-config by id anchor; OneDrive: `/org-config.json` by path — core standards § Addressing, finding 63) — capture `remote_filesystem.connection.all_members_group` and `resource_ids.members_registry`, and confirm the installing member's `member_hash` appears in the `admins[]` array. If not, halt and instruct the admin to grant org admin role first.
+- `aifs_read("id:{org_config_id}")` (org-config by id anchor; OneDrive: `/org-config.json` by path — core `runtime-reference.md` § "Addressing: Owned Content and Sharing", finding 63) — capture `remote_filesystem.connection.all_members_group` and `resource_ids.members_registry`, and confirm the installing member's `member_hash` appears in the `admins[]` array. If not, halt and instruct the admin to grant org admin role first.
 - `aifs_exists("/shared/client-intelligence/collection-state.json")` — if true, read it. `version` below `2.0.0`, and NOT recorded in org-config `installed_collections[client-intelligence].upgrade_reviews_confirmed` already includes `"1-to-2"` (the admin finished the review) → halt and route to `upgrade/1-to-2.md` (Repair Path, first rule). Otherwise halt with the "already installed" message and branch to the repair path on admin confirmation.
 
 ### 2. (Removed in 2.0.0)
@@ -151,7 +151,7 @@ Drive folders without files are ephemeral. To keep `public-index/instances/` and
 
 ### 8. Apply ACLs (core permission-changes procedure)
 
-Never call `aifs_share` directly. Per `agent-index-core/standards.md` § "Permission changes: list, confirm, apply, verify", every permission change goes through the core procedure, install time included: the installer sees the exact changes, confirms them, and each is applied under the installer's own credentials and verified.
+Never call `aifs_share` directly. Per `agent-index-core/runtime-reference.md` § "Permission changes: list, confirm, apply, verify", every permission change goes through the core procedure, install time included: the installer sees the exact changes, confirms them, and each is applied under the installer's own credentials and verified.
 
 Follow `/agent-index-core/internal/permission-changes.md` with one table:
 - `calling_task: "client-intelligence/install"`, `confirmer: "admin"`
