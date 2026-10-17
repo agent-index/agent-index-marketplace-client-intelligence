@@ -1,6 +1,6 @@
 # Changelog
 
-## [2.4.2] — <RELEASE_DATE> — setup-responses format
+## [2.4.2] — 2026-10-17 — setup-responses format
 
 ### Fixed (4.0.1 pass — OneDrive and Google Drive live tests)
 - **`provides[]` no longer declares the undefined `client-intelligence` capability type (finding 56).** upgrade-collection removes the stale registration.
