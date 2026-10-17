@@ -1,7 +1,7 @@
 ---
 name: add-admin
 type: task
-version: 2.1.1
+version: 2.1.2
 collection: client-intelligence
 description: Admin-only task to grant admin role to another member of the org. Admin role is derived from the filesystem - a collection admin is any member with Drive Editor access to /shared/client-intelligence/templates/ and /shared/client-intelligence/config/. This task applies two shares (one per folder) as one all-or-nothing table through the core permission-changes procedure (confirmer collection_admin); the caller confirms both at once. Authority is backend-enforced - only existing collection admins can share these folders, so anyone else is refused by the backend.
 stateful: false

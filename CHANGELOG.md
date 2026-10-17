@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.4.3] — <RELEASE_DATE> — standards.md citations re-pointed
+
+Pairs with core 4.1.0 (CI-013, client-intelligence#1 by Kallista Salak): add-admin 2.1.2, client-brief 1.0.3, create-client 2.4.1, delete-client 2.0.1, list-clients 2.1.2, remove-admin 2.1.2, view-client 2.3.2 and the collection setup cite core `runtime-reference.md` instead of the retired `standards.md`. No behaviour change.
+
 ## [2.4.2] — 2026-10-17 — setup-responses format
 
 ### Fixed (4.0.1 pass — OneDrive and Google Drive live tests)

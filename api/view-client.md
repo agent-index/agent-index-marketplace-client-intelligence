@@ -1,7 +1,7 @@
 ---
 name: view-client
 type: task
-version: 2.3.1
+version: 2.3.2
 collection: client-intelligence
 description: Member-facing read task that displays a client's full data and recent changelog. Tier-resolved via the universal-floor pointer — org-public clients read from the commons; private clients read from the owner's space by folder ID (succeeds only for the owner and grantees). Callers without access get the floor view (name, owner, tier) plus how to ask the owner. When a brand-book provider supplies the `client-profile` template, renders a branded, interactive Cowork profile (with Edit / Manage access / Generate brief / Change visibility / Archive) by default; otherwise renders the plain record. Can export the profile to a standalone HTML / PDF / Word artifact on request.
 stateful: false

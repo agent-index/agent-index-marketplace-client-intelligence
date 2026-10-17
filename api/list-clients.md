@@ -1,7 +1,7 @@
 ---
 name: list-clients
 type: task
-version: 2.1.1
+version: 2.1.2
 collection: client-intelligence
 description: Member-facing read task that renders the org-wide client directory from the universal-floor pointer index. Every client's name, owner, tier, and status are visible to all members; data access is shown per the pointer's scope — mine / shared-with-me / org-public / name-only. Pointer-driven; no per-instance probing required. When a brand-book provider supplies the `client-list` template, renders a branded, interactive Cowork directory (cards with Add/Edit/Archive) by default; otherwise renders the markdown table. Can export the directory to a standalone HTML / PDF / Word artifact on request.
 stateful: false
