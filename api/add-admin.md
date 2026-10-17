@@ -1,7 +1,7 @@
 ---
 name: add-admin
 type: task
-version: 2.1.0
+version: 2.1.1
 collection: client-intelligence
 description: Admin-only task to grant admin role to another member of the org. Admin role is derived from the filesystem - a collection admin is any member with Drive Editor access to /shared/client-intelligence/templates/ and /shared/client-intelligence/config/. This task applies two shares (one per folder) as one all-or-nothing table through the core permission-changes procedure (confirmer collection_admin); the caller confirms both at once. Authority is backend-enforced - only existing collection admins can share these folders, so anyone else is refused by the backend.
 stateful: false
@@ -48,7 +48,7 @@ Confirmation surfaced to the caller after the procedure returns `complete` with 
 
 ### Step 2: Resolve target member
 
-Accept email or display name. Resolve via `members-registry.json` — read it by id anchor (`aifs_read("id:{resource_ids.members_registry}")`, id from org-config, itself read by id anchor `id:{org_config_id}`; root-level paths don't resolve for non-Drive-members) — to `member_hash + email + sharing_identity + display_name`. Admin role is for org members, so the target must be in the registry. If multiple matches, ask the caller to disambiguate. If no match: *"I can't find a member matching `{input}`. Check the spelling, or run `@ai:invite-member` if they're new to the org. Note: a person must already be an org member before they can be made a client-intelligence admin."*
+Accept email or display name. Resolve via `members-registry.json` — read it by id anchor (`aifs_read("id:{resource_ids.members_registry}")`, id from org-config, itself read by id anchor `id:{org_config_id}`; on gdrive root-level paths don't resolve for non-Drive-members; OneDrive: read `/org-config.json` and `/members-registry.json` by path instead — a bare `id:` resolves against your own drive there, core standards § Addressing, finding 63) — to `member_hash + email + sharing_identity + display_name`. Admin role is for org members, so the target must be in the registry. If multiple matches, ask the caller to disambiguate. If no match: *"I can't find a member matching `{input}`. Check the spelling, or run `@ai:invite-member` if they're new to the org. Note: a person must already be an org member before they can be made a client-intelligence admin."*
 
 If the target is the caller themselves: *"You can't add yourself as an admin. If you don't currently have admin access, ask an existing admin to grant it to you."*
 

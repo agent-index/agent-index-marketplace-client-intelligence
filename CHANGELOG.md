@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.4.2] — 2026-10-17 — setup-responses format
+
+### Fixed (4.0.1 pass — OneDrive and Google Drive live tests)
+- **`provides[]` no longer declares the undefined `client-intelligence` capability type (finding 56).** upgrade-collection removes the stale registration.
+- **Setup step 10 writes `collection-setup-responses.md` in the canonical format** at `/client-intelligence/setup/`, so apply-updates can read the org-mandated values (finding 14).
+- `client-brief-setup.md` names the collection-qualified install path (finding 14).
+- **OneDrive reads org-config and the registry by path** (add-admin 2.1.1, remove-admin 2.1.1, setup), and reads the brand-book collection at `/{provider_collection}` (client-brief 1.0.2, list-clients 2.1.1, view-client 2.3.1) (finding 63).
+
 ## [2.4.1] — 2026-10-13 — Fixes from the dev-1 live test (Dev Two)
 
 ### Fixed
