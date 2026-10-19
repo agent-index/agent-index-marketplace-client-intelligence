@@ -6,7 +6,7 @@
 
 ### 1. Resolve the provider (single-provider auto-bind, V1)
 
-`aifs_read("/org-config.json")` → `capability_providers["brand-book"].providers`.
+Read org-config (org-config read by backend (local `agent-index.json` `remote_filesystem.backend`): on Google Drive `aifs_read("id:{org_config_id}")` with `org_config_id` from local `agent-index.json` `remote_filesystem.connection`; on OneDrive `aifs_read("/org-config.json")` (a bare `/org-config.json` path fails for a member who is not in the Shared Drive, and a bare `id:` fails on OneDrive — core `runtime-reference.md` § "Addressing: Owned Content and Sharing", finding 63)) → `capability_providers["brand-book"].providers`. If org-config can't be read, that is a read failure, not "no provider": say so rather than proceeding unbranded silently.
 - Absent / empty → **no brand**: proceed UNBRANDED with a one-line notice ("Brand styling not configured — install and register a brand-book provider to enable it."). This is `fallback: skip_with_notice` per our `requires[]` declaration. Done.
 - Exactly one → use it: note `provider_collection` and `provider_config.brand_usage` (`required` | `optional`).
 - Multiple → V1: surface "Multiple brand-book providers are registered; binding configuration isn't supported yet — using none." Proceed unbranded.
